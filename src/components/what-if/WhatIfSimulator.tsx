@@ -5,7 +5,7 @@ import { EventPlan, BudgetCategorySlug, ScenarioInput } from '@/lib/types';
 import { CULTURAL_CATEGORIES } from '@/lib/constants/cultural';
 import { recomputeScenario, ScenarioResult } from '@/lib/engine/scenario';
 import { DiffTable } from './DiffTable';
-import { Sliders, Lock, Unlock, Check, RefreshCw, Zap, Users, IndianRupee, Calendar } from 'lucide-react';
+import { Sliders, Lock, Unlock, Check, RefreshCw, Zap, Users, IndianRupee, Calendar, Sparkles } from 'lucide-react';
 
 interface WhatIfSimulatorProps {
   plan: EventPlan;
@@ -100,6 +100,38 @@ export function WhatIfSimulator({ plan, onApplyScenario }: WhatIfSimulatorProps)
             )}
           </button>
         </div>
+      </div>
+
+      {/* Quick Preset Buttons */}
+      <div className="bg-amber-50/60 border border-amber-200/70 rounded-xl p-3 flex flex-wrap items-center gap-2">
+        <span className="text-xs font-bold text-amber-950 flex items-center gap-1">
+          <Sparkles className="w-3.5 h-3.5 text-amber-600" />
+          <span>Quick Scenarios:</span>
+        </span>
+        <button
+          onClick={() => {
+            setGuestsSlider(currentGuests + 50);
+          }}
+          className="text-xs font-bold bg-white text-orange-900 border border-orange-300 hover:bg-orange-100 px-3 py-1 rounded-lg transition-colors shadow-2xs"
+        >
+          +50 Guests (Priya&apos;s Demo Story)
+        </button>
+        <button
+          onClick={() => {
+            setBudgetSlider(currentBudget + 100000);
+          }}
+          className="text-xs font-semibold bg-white text-emerald-900 border border-emerald-300 hover:bg-emerald-100 px-3 py-1 rounded-lg transition-colors shadow-2xs"
+        >
+          +₹1 Lakh Budget Expansion
+        </button>
+        <button
+          onClick={() => {
+            setBudgetSlider(Math.max(150000, currentBudget - 50000));
+          }}
+          className="text-xs font-semibold bg-white text-rose-900 border border-rose-300 hover:bg-rose-100 px-3 py-1 rounded-lg transition-colors shadow-2xs"
+        >
+          -₹50,000 Budget Compression
+        </button>
       </div>
 
       {/* Control Sliders Grid */}

@@ -119,3 +119,4 @@ export class LocalStoragePlanRepository implements PlanRepository {
 
 // Global singleton instance for client-side usage
 export const planRepository = new LocalStoragePlanRepository();
+

@@ -118,3 +118,4 @@ export function TimelineView({ tasks, eventDate }: TimelineViewProps) {
     </div>
   );
 }
+

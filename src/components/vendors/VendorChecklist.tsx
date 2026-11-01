@@ -108,3 +108,4 @@ export function VendorChecklist({ vendors, profile, onUpdateStatus }: VendorChec
     </div>
   );
 }
+

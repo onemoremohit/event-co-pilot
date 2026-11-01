@@ -76,7 +76,7 @@ function AppContent() {
       eventSubType: draftProfile.eventSubType || 'festival',
       eventName: draftProfile.eventName || 'Society Cultural Festival 2026',
       eventDate: draftProfile.eventDate || '2026-12-15',
-      planningStartDate: draftProfile.planningStartDate || new Date().toISOString().split('T')[0],
+      planningStartDate: draftProfile.planningStartDate || '2026-11-01',
       totalBudget: draftProfile.totalBudget || { amount: 400000, currency: 'INR' },
       guestCount: draftProfile.guestCount || 200,
       guestMix: draftProfile.guestMix || { family: 50, elders: 20, kids: 20, colleagues: 5, friends: 5 },
@@ -115,13 +115,32 @@ function AppContent() {
     }
   };
 
-  const currentProfile = plan ? plan.profile : (draftProfile as EventProfile);
-
   return (
     <div className="min-h-screen bg-gradient-to-b from-amber-50/40 via-white to-orange-50/20 text-slate-900 flex flex-col font-sans">
       <Navbar />
 
       <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6">
+        {/* Priya Demo Guide Banner */}
+        {plan && plan.profile.id === 'priya-demo-diwali-2026' && (
+          <div className="mb-6 bg-gradient-to-r from-amber-600 via-orange-600 to-amber-700 rounded-2xl p-4 text-white shadow-md shadow-orange-500/15 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+            <div className="flex items-center gap-3">
+              <span className="text-2xl">🎉</span>
+              <div>
+                <h4 className="font-bold text-sm tracking-tight">Priya&apos;s Demo Story (Gokuldham Society Festival Night)</h4>
+                <p className="text-xs text-amber-100">
+                  Baseline generated: 200 guests, ₹4 Lakhs, 6 weeks. Now test the sudden RSVP surge (+50 guests).
+                </p>
+              </div>
+            </div>
+            <button
+              onClick={() => setActiveTab('whatif')}
+              className="px-4 py-2 bg-white text-orange-900 font-bold text-xs rounded-xl shadow-sm hover:bg-amber-50 transition-all shrink-0 active:scale-95"
+            >
+              Simulate +50 Guests in What-If →
+            </button>
+          </div>
+        )}
+
         {/* TAB: Intake */}
         {activeTab === 'intake' && (
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
@@ -200,7 +219,7 @@ function AppContent() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col sm:flex-row items-center justify-between text-xs text-slate-500 gap-2">
           <span>Event Co-pilot • Hack2Skills PromptWars 5 • Cultural Community Planner</span>
           <span className="font-mono text-[11px] bg-slate-100 text-slate-600 px-2 py-0.5 rounded">
-            All math deterministic • No LLM budget hallucinations
+            All math deterministic • Zero arithmetic hallucinations
           </span>
         </div>
       </footer>

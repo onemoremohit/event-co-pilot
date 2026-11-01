@@ -417,3 +417,4 @@ export const CULTURAL_VENDOR_TEMPLATES: VendorTemplate[] = [
     ]
   }
 ];
+

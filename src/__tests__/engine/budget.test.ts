@@ -97,3 +97,4 @@ describe('BudgetAllocator (Deterministic Math Engine)', () => {
     expect(result.warnings.length).toBeGreaterThan(0);
   });
 });
+

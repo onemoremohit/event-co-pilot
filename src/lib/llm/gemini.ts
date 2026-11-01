@@ -176,3 +176,4 @@ Output format: Strictly a JSON object:
     return JSON.parse(candidateText);
   }
 }
+

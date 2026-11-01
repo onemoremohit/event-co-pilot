@@ -487,3 +487,4 @@ export interface LLMProvider {
 | D4 | Deterministic-first math engine | LLM must never compute or balance numbers; guarantees zero arithmetic hallucinations. |
 | D5 | Provider pattern for LLM with Mock fallback | Seamless local dev, rock-solid tests, and 100% demo uptime even under network or rate-limit issues. |
 | D6 | Conditional "DIY-Max" plan style | Provides genuine pragmatic utility for tight community budgets by leveraging volunteer power. |
+

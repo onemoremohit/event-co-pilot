@@ -99,3 +99,4 @@ export function TaskBoard({ tasks, onUpdateStatus }: TaskBoardProps) {
     </div>
   );
 }
+

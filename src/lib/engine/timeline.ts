@@ -218,3 +218,4 @@ function calculateCriticalPath(tasks: Task[]): string[] {
 
   return longestChain.length > 0 ? longestChain : tasks.slice(0, 3).map(t => t.id);
 }
+
