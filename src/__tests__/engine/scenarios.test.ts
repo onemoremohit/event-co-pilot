@@ -54,3 +54,4 @@ describe('Run Scenarios', () => {
     runScenario('Scenario 3: Small Town Neighborhood Gathering', 'Anand Town Community Center', 'small_town', 150000, 60, 'neighborhood', 3, { top2: ['food_prasad', 'decor'], notes: '' });
   });
 });
+

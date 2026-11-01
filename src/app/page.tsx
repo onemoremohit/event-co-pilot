@@ -11,6 +11,7 @@ import { WhatIfSimulator } from '@/components/what-if/WhatIfSimulator';
 import { VendorChecklist } from '@/components/vendors/VendorChecklist';
 import { TaskBoard } from '@/components/tasks/TaskBoard';
 import { DayOfRunSheet } from '@/components/tasks/DayOfRunSheet';
+import { ErrorBoundary } from '@/components/common/ErrorBoundary';
 import { EventProfile, EventPlan } from '@/lib/types';
 import { resolveLocationTier } from '@/lib/engine/location';
 import confetti from 'canvas-confetti';
@@ -178,75 +179,87 @@ function AppContent() {
 
         {/* TAB: Intake */}
         {activeTab === 'intake' && (
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-            <div className="lg:col-span-7">
-              <IntakeChat
-                currentProfile={draftProfile}
-                onProfileUpdate={handleProfileUpdate}
-                onGeneratePlan={handleGeneratePlan}
-                isGenerating={isGenerating}
-                onStartDemo={startPriyaDemo}
-                isDemoRunning={isDemoRunning}
-              />
+          <ErrorBoundary fallbackTitle="Intake Assistant Encountered a Display Issue">
+            <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+              <div className="lg:col-span-7">
+                <IntakeChat
+                  currentProfile={draftProfile}
+                  onProfileUpdate={handleProfileUpdate}
+                  onGeneratePlan={handleGeneratePlan}
+                  isGenerating={isGenerating}
+                  onStartDemo={startPriyaDemo}
+                  isDemoRunning={isDemoRunning}
+                />
+              </div>
+              <div className="lg:col-span-5">
+                <LiveProfileCard
+                  profile={draftProfile}
+                  completeness={completeness}
+                  onGeneratePlan={handleGeneratePlan}
+                  isGenerating={isGenerating}
+                />
+              </div>
             </div>
-            <div className="lg:col-span-5">
-              <LiveProfileCard
-                profile={draftProfile}
-                completeness={completeness}
-                onGeneratePlan={handleGeneratePlan}
-                isGenerating={isGenerating}
-              />
-            </div>
-          </div>
+          </ErrorBoundary>
         )}
 
         {/* TAB: Dashboard */}
         {activeTab === 'dashboard' && plan && (
-          <div className="space-y-6">
-            <BudgetBreakdown
-              budget={plan.budget}
-              onOpenWhatIf={() => setActiveTab('whatif')}
-            />
-            <TimelineView
-              tasks={plan.tasks}
-              eventDate={plan.profile.eventDate}
-            />
-          </div>
+          <ErrorBoundary fallbackTitle="Dashboard Encountered an Error">
+            <div className="space-y-6">
+              <BudgetBreakdown
+                budget={plan.budget}
+                onOpenWhatIf={() => setActiveTab('whatif')}
+              />
+              <TimelineView
+                tasks={plan.tasks}
+                eventDate={plan.profile.eventDate}
+              />
+            </div>
+          </ErrorBoundary>
         )}
 
         {/* TAB: What-If */}
         {activeTab === 'whatif' && plan && (
-          <WhatIfSimulator
-            plan={plan}
-            onApplyScenario={applyWhatIfScenario}
-          />
+          <ErrorBoundary fallbackTitle="What-If Simulator Encountered an Error">
+            <WhatIfSimulator
+              plan={plan}
+              onApplyScenario={applyWhatIfScenario}
+            />
+          </ErrorBoundary>
         )}
 
         {/* TAB: Vendors */}
         {activeTab === 'vendors' && plan && (
-          <VendorChecklist
-            vendors={plan.vendors}
-            profile={plan.profile}
-            onUpdateStatus={updateVendorStatus}
-          />
+          <ErrorBoundary fallbackTitle="Vendor Checklist Encountered an Error">
+            <VendorChecklist
+              vendors={plan.vendors}
+              profile={plan.profile}
+              onUpdateStatus={updateVendorStatus}
+            />
+          </ErrorBoundary>
         )}
 
         {/* TAB: Tasks */}
         {activeTab === 'tasks' && plan && (
-          <TaskBoard
-            tasks={plan.tasks}
-            onUpdateStatus={updateTaskStatus}
-          />
+          <ErrorBoundary fallbackTitle="Task Board Encountered an Error">
+            <TaskBoard
+              tasks={plan.tasks}
+              onUpdateStatus={updateTaskStatus}
+            />
+          </ErrorBoundary>
         )}
 
         {/* TAB: Run Sheet */}
         {activeTab === 'runsheet' && plan && (
-          <DayOfRunSheet
-            runSheet={plan.runSheet}
-            eventName={plan.profile.eventName}
-            eventDate={plan.profile.eventDate}
-            onUpdateEntry={updateRunSheetEntry}
-          />
+          <ErrorBoundary fallbackTitle="Day-of Run Sheet Encountered an Error">
+            <DayOfRunSheet
+              runSheet={plan.runSheet}
+              eventName={plan.profile.eventName}
+              eventDate={plan.profile.eventDate}
+              onUpdateEntry={updateRunSheetEntry}
+            />
+          </ErrorBoundary>
         )}
       </main>
 

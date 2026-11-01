@@ -27,10 +27,12 @@ function generateDiffReason(
   delta: number,
   inputChanges: ScenarioInput,
   oldProfile: EventProfile,
-  isLocked: boolean
+  isLocked: boolean,
+  oldMode?: string,
+  newMode?: string
 ): string {
   if (isLocked) {
-    return 'Category is locked by user; amount preserved across rebalancing.';
+    return 'Category is locked by organizer; exact cash amount strictly preserved across rebalancing.';
   }
 
   const reasons: string[] = [];
@@ -38,6 +40,10 @@ function generateDiffReason(
   const budgetChange = (inputChanges.budget ?? oldProfile.totalBudget.amount) - oldProfile.totalBudget.amount;
   const oldLocTier = oldProfile.location?.tier || resolveLocationTier(oldProfile.location?.city).tier;
   const newLocTier = inputChanges.locationTier || oldLocTier;
+
+  if (oldMode && newMode && oldMode !== newMode) {
+    reasons.push(`Sourcing transitioned from ${oldMode} to ${newMode}`);
+  }
 
   if (newLocTier !== oldLocTier) {
     const oldConfig = LOCATION_TIERS[oldLocTier];
@@ -162,7 +168,15 @@ export function recomputeScenario(
         delta,
         deltaPercentage: deltaPct,
         direction,
-        reason: generateDiffReason(newCat.slug, delta, inputChanges, profile, isLocked),
+        reason: generateDiffReason(
+          newCat.slug,
+          delta,
+          inputChanges,
+          profile,
+          isLocked,
+          oldCat.sourcingModeLabel,
+          newCat.sourcingModeLabel
+        ),
         severity
       });
     }

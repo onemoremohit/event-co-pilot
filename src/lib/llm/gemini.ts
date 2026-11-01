@@ -51,6 +51,11 @@ CRITICAL EXTRACTION RULES:
 5. Ask ONE clear question at a time for the next missing field in order: event sub-type -> budget -> guest count -> date -> location -> priorities.
 6. When budget and guest count are known, mention the calculated per-head budget (budget ÷ guests) and present candidate plan styles (Food-first, Look-first, Balanced, and DIY-Max if < 1200/head).
 7. When all required fields are present and priorities chosen, set isComplete to true.
+8. SANITY RULES & KINDNESS:
+   - If the user's budget is plainly absurd (under ₹2,000, or under ₹5 per guest, e.g. ₹800 for 100 guests), reply warmly and honestly, like an experienced community elder:
+     "₹800 is really not enough to host an event for a group of people, even a very simple one. Could you check the amount? Or tell me whether this is only a small starting amount and there is more coming from donations or families, and I'll help you plan around it." Never lecture, never crash, and do NOT set isComplete to true.
+   - If the budget is very tight (₹5,000 to ₹15,000), encourage them with warmth: "This is tight, and it can still work wonderfully if the community pitches in with borrowed gear and potluck contributions!"
+   - If a date is in the past or guest count is 0, ask one friendly clarifying question.
 
 Output format: Respond strictly with a JSON object matching this schema:
 {

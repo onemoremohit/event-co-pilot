@@ -181,3 +181,4 @@ export function getCategoryLocationMultiplier(tier: LocationTier, category: Budg
   const effective = 1.0 + (baseMultiplier - 1.0) * sensitivity;
   return Number(effective.toFixed(3));
 }
+

@@ -21,6 +21,53 @@ export function extractFieldsFromText(text: string, baseDate = new Date()): Extr
   const result: ExtractedFields = {};
   const lower = text.toLowerCase().trim();
 
+  // 0. Negative & Zero budget checks
+  const negativeMatch = lower.match(/(?:budget\s*(?:is|of)?\s*)?(-\s*\d[\d,]*|negative\s*\d+)/i);
+  if (negativeMatch) {
+    const rawVal = parseInt(negativeMatch[1].replace(/negative\s*/i, '-').replace(/[\s,]/g, ''), 10);
+    if (!isNaN(rawVal) && rawVal < 0) {
+      result.budgetAmount = rawVal;
+    }
+  }
+
+  if (result.budgetAmount === undefined && (lower.includes('0 budget') || lower.includes('zero budget') || lower.match(/\bbudget\s*(?:is|of)?\s*0\b/))) {
+    result.budgetAmount = 0;
+  }
+
+  // Written word numbers (e.g. "forty five thousand", "one lakh", "50k")
+  if (result.budgetAmount === undefined) {
+    const wordThousands = [
+      { pattern: /\b(?:forty[- ]five)\s*thousand\b/i, val: 45000 },
+      { pattern: /\b(?:twenty[- ]five)\s*thousand\b/i, val: 25000 },
+      { pattern: /\b(?:thirty[- ]five)\s*thousand\b/i, val: 35000 },
+      { pattern: /\b(?:seventy[- ]five)\s*thousand\b/i, val: 75000 },
+      { pattern: /\b(?:ten)\s*thousand\b/i, val: 10000 },
+      { pattern: /\b(?:fifteen)\s*thousand\b/i, val: 15000 },
+      { pattern: /\b(?:twenty)\s*thousand\b/i, val: 20000 },
+      { pattern: /\b(?:thirty)\s*thousand\b/i, val: 30000 },
+      { pattern: /\b(?:forty)\s*thousand\b/i, val: 40000 },
+      { pattern: /\b(?:fifty)\s*thousand\b/i, val: 50000 },
+      { pattern: /\b(?:sixty)\s*thousand\b/i, val: 60000 },
+      { pattern: /\b(?:seventy)\s*thousand\b/i, val: 70000 },
+      { pattern: /\b(?:eighty)\s*thousand\b/i, val: 80000 },
+      { pattern: /\b(?:ninety)\s*thousand\b/i, val: 90000 },
+      { pattern: /\b(?:one|1)\s*lakh\b/i, val: 100000 },
+      { pattern: /\b(?:two|2)\s*lakhs?\b/i, val: 200000 },
+      { pattern: /\b(?:three|3)\s*lakhs?\b/i, val: 300000 },
+      { pattern: /\b(?:four|4)\s*lakhs?\b/i, val: 400000 },
+      { pattern: /\b(?:five|5)\s*lakhs?\b/i, val: 500000 },
+      { pattern: /\b(?:ten|10)\s*lakhs?\b/i, val: 1000000 },
+      { pattern: /\b(?:twenty[- ]five|25)\s*lakhs?\b/i, val: 2500000 },
+    ];
+
+    for (const item of wordThousands) {
+      if (item.pattern.test(lower)) {
+        result.budgetAmount = item.val;
+        break;
+      }
+    }
+  }
+
   // 1. Budget extraction (Lakhs, Crores, Thousands, Raw Numbers)
   // e.g. "4 lakh", "4.5 lakhs", "4L", "1.5L", "₹4,00,000", "50k", "50,000", "INR 400000"
   const lakhMatch = lower.match(/(?:(?:₹|rs\.?|inr|budget(?: of)?)\s*)?(\d+(?:\.\d+)?)\s*(?:lakhs?|lacs?|l\b)/i);
@@ -74,6 +121,9 @@ export function extractFieldsFromText(text: string, baseDate = new Date()): Extr
 
   // 2. Guest Count extraction
   // e.g. "200 guests", "around 150 people", "60 attendees", "250 members", "make it 150 guests"
+  if (lower.match(/\b(?:0|zero)\s*(?:guests?|people|attendees?|members?|pax)\b/i)) {
+    result.guestCount = 0;
+  }
   const guestMatch = lower.match(/(?:(?:around|approx|approximately|about|for|it)\s*)?(\d{1,4})\s*(?:guests?|people|attendees?|members?|residents?|persons?|pax)\b/i);
   if (guestMatch) {
     const count = parseInt(guestMatch[1], 10);
@@ -133,11 +183,20 @@ export function extractFieldsFromText(text: string, baseDate = new Date()): Extr
   }
 
   // 4. Date and Relative Timeframes
-  // e.g. "2026-12-15", "15 December", "15th Dec", "in 6 weeks", "in 3 weeks", "in 20 days"
-  const isoDateMatch = lower.match(/\b(\d{4}-\d{2}-\d{2})\b/);
-  if (isoDateMatch) {
-    result.eventDate = isoDateMatch[1];
+  if (lower.includes('yesterday')) {
+    const yesterday = new Date(baseDate.getTime() - 86400000);
+    result.eventDate = yesterday.toISOString().split('T')[0];
+  } else if (lower.includes('last week')) {
+    const lastWeek = new Date(baseDate.getTime() - 7 * 86400000);
+    result.eventDate = lastWeek.toISOString().split('T')[0];
   } else {
+    const isoDateMatch = lower.match(/\b(\d{4}-\d{2}-\d{2})\b/);
+    if (isoDateMatch) {
+      result.eventDate = isoDateMatch[1];
+    }
+  }
+
+  if (!result.eventDate) {
     // Relative weeks: "in 6 weeks", "6 weeks", "3 weeks"
     const weeksMatch = lower.match(/(?:in\s*)?(\d+)\s*weeks?/i);
     if (weeksMatch) {
@@ -251,3 +310,4 @@ export function extractFieldsFromText(text: string, baseDate = new Date()): Extr
 
   return result;
 }
+

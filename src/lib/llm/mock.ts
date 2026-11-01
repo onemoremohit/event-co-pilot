@@ -47,6 +47,37 @@ export class MockLLMProvider implements LLMProvider {
     const isCorrection = (extracted.guestCount && current.guestCount && extracted.guestCount !== current.guestCount) ||
                          (extracted.budgetAmount && current.totalBudget?.amount && extracted.budgetAmount !== current.totalBudget.amount);
 
+    // 2b. Evaluate input sanity with kindness and realism
+    const { evaluateInputSanity } = await import('../engine/sanity');
+    const sanity = evaluateInputSanity(
+      updated.totalBudget?.amount,
+      updated.guestCount,
+      updated.eventDate,
+      updated.eventSubType
+    );
+
+    if (sanity.isAbsurd) {
+      return {
+        message: sanity.humanMessage,
+        profileUpdate: extracted,
+        suggestedQuickReplies: [
+          'Yes, this is a starting amount (donations coming)',
+          'Enter different budget (e.g. ₹50,000)',
+          sanity.nearestWorkableOption
+            ? `Plan intimate tea for ~${sanity.nearestWorkableOption.maxFeasibleGuests} neighbors`
+            : 'Start new plan'
+        ]
+      };
+    }
+
+    if (sanity.flags.includes('past_date') || sanity.flags.includes('zero_or_negative_guests') || sanity.flags.includes('zero_or_negative_budget')) {
+      return {
+        message: sanity.humanMessage,
+        profileUpdate: extracted,
+        suggestedQuickReplies: ['In 3 weeks', 'In 6 weeks', '50 guests', '100 guests']
+      };
+    }
+
     // 3. Check what required fields are still missing in priority order
     // Required: subType, budget, guests, date, location
 

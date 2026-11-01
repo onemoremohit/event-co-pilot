@@ -72,6 +72,13 @@ export type BudgetCategorySlug =
   | 'photography'
   | 'misc';
 
+export type SourcingMode =
+  | 'community_sourced'
+  | 'minimal_paid'
+  | 'standard_paid'
+  | 'enhanced_paid'
+  | 'premium_paid';
+
 export interface BudgetSubItem {
   label: string;
   estimatedCost: number;
@@ -90,6 +97,11 @@ export interface BudgetCategory {
   perHeadCost: number | null;
   why: string;
   subItems: BudgetSubItem[];
+  sourcingMode?: SourcingMode;
+  sourcingModeLabel?: string;
+  deliverablesDescription?: string;
+  communityTasks?: string[];
+  sponsorOpportunities?: string[];
 }
 
 export interface FeasibilityResult {
@@ -97,6 +109,39 @@ export interface FeasibilityResult {
   perHeadBudget: number;
   warnings: string[];
   suggestions: string[];
+}
+
+export interface ResourcefulnessToolkit {
+  perHouseholdContribution: {
+    targetAmount: number;
+    householdCount: number;
+    askPerHousehold: number;
+    note: string;
+  };
+  sponsorTargets: {
+    targetAmount: number;
+    sponsorCount: number;
+    askPerSponsor: number;
+    description: string;
+  };
+  potluckRecommendation: string;
+  nextTierUnlock: {
+    requiredAdditionalAmount: number;
+    unlockDescription: string;
+    affectedCategory: string;
+  };
+}
+
+export interface PlanVerification {
+  isVerified: boolean;
+  invariantsChecked: {
+    noNegative: boolean;
+    exactSum: boolean;
+    normalizedPercentages: boolean;
+    perGuestValid: boolean;
+  };
+  badgeText: string;
+  details: string;
 }
 
 export interface BudgetPlan {
@@ -113,6 +158,8 @@ export interface BudgetPlan {
   feasibility: FeasibilityResult;
   version: number;
   createdAt: string;
+  resourcefulnessToolkit?: ResourcefulnessToolkit;
+  verification?: PlanVerification;
 }
 
 // ---------------------------------------------------------------------------

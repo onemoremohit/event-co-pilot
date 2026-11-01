@@ -488,3 +488,57 @@ export interface LLMProvider {
 | D5 | Provider pattern for LLM with Mock fallback | Seamless local dev, rock-solid tests, and 100% demo uptime even under network or rate-limit issues. |
 | D6 | Conditional "DIY-Max" plan style | Provides genuine pragmatic utility for tight community budgets by leveraging volunteer power. |
 
+---
+
+## 10. Budget Engine Redesign: Sourcing Modes & Invariant Architecture
+
+### 10.1 Root Cause Analysis of the Negative Allocation Bug
+In the previous implementation, fixed and per-head "floor costs" were unconditionally allocated to categories before distributing remaining funds. When a user inputted a tight community budget (e.g., ₹45,000 for 200 guests), the sum of arbitrary floor costs (₹78,000+) exceeded the net allocatable budget (₹40,500). Residual subtraction in the priority-boost phase resulted in negative numbers (Food & Prasad dropped to -₹39,960 / -98.67%), while the UI naively displayed "100% allocated without leakage".
+
+### 10.2 Core Philosophy: The Reality of Volunteer Community Organizers
+Real-world cultural and community events in India operate on modest cash budgets (₹10,000, ₹50,000, ₹1,00,000) supplemented by volunteer labor, temple/school spaces, borrowed AV systems, and in-kind food contributions.
+- **The app must never shame the user or say "events cost a lot of money".**
+- Its mission is to **make the event happen** with whatever resources exist.
+- At low budgets, the engine shows the resourceful community way: borrowed sound systems, volunteer stage setup, potluck/prasad grain contributions, local shopkeeper sponsorships, and free community lawns.
+- Money is spent strictly where cash is unavoidable, while everything else is powered by community effort with concrete assigned tasks.
+
+### 10.3 Invariant Guarantees (Enforced by Automated Property Tests)
+1. **Strict Non-Negativity:** Every category allocation is `≥ 0` in all cases.
+2. **Exact Budget Sum:** `sum(category allocations) + contingency reserve === usable cash budget` to the exact integer rupee.
+3. **Exact Percentage Normalization:** Category percentages are derived from final allocations and sum to `100.0%`.
+4. **Safe Per-Guest Metrics:** Per-guest figures are never negative, `NaN`, or `Infinity`.
+5. **Real Verification Gate:** The UI displays "Fully Allocated & Verified" only after an automated verification function evaluates invariants 1–3.
+6. **Graceful Fault Tolerance:** The engine never throws exceptions on unexpected input; all failure paths return a structured result with an encouraging message.
+
+### 10.4 Discrete Sourcing Modes per Category
+Instead of rigid commercial cash floors, each category defines 5 discrete sourcing modes from zero-cash to luxury:
+1. `community_sourced`: ₹0 to nominal cash. Relies on volunteers, borrowed sound gear, community halls, potluck/grain donations. Generates volunteer and donor tasks.
+2. `minimal_paid`: Bare-bones local vendor rates (e.g. basic tentage, auto-rickshaw PA rental, wholesale dry prasad).
+3. `standard_paid`: Standard community package (rented sound engineer, decorative floral backdrop, catered hot meal).
+4. `enhanced_paid`: High quality setup (digital audio console, LED stage wash, drone video, multi-course feast).
+5. `premium_paid`: Turnkey commercial production (concert-grade line arrays, celebrity artists, bespoke banquet).
+
+### 10.5 Marginal Value Step-by-Step Upgrade Algorithm
+1. **Contingency Locking:** Reserve `clamp(5% to 10%, min ₹500, max ₹2,00,000)` scaled for emergencies.
+2. **Base Level Initialization:** Initialize all 9 cultural categories at `community_sourced` mode (cash = 0, volunteer tasks generated).
+3. **Essential Category Guarantee:** If budget permits, upgrade `essential` categories (`venue_permissions`, `food_prasad`, `safety`) from `community_sourced` to `minimal_paid`.
+4. **Priority-Driven Marginal Upgrades:**
+   - Rank categories based on user priorities (`top2` boosted 1.6x) and event sub-type weights.
+   - Iteratively evaluate the incremental cost to upgrade each candidate category to its next sourcing mode (`community` → `minimal` → `standard` → `enhanced` → `premium`).
+   - Upgrade the highest-value category that fits within the remaining cash.
+   - Repeat until no category can be upgraded.
+5. **Surplus Distribution & Exact Rounding:** Distribute any unspent residual rupees into user priority categories (e.g. Food & Prasad portion upgrade or Stage lighting) ensuring exact budget closure down to the single rupee.
+
+### 10.6 Resourcefulness Toolkit (Computed Deterministically)
+When cash is tight, the engine computes actionable community remedies:
+- **Per-Household Contribution Target:** `(Target Gap) / (Estimated Households)` rounded to friendly rupee increments (e.g. ₹250 or ₹500 per family).
+- **Local Sponsor Targets:** `(Cost Gap) / 3` targeted at local grocers, cloth merchants, or society patrons.
+- **Potluck / Contributed Raw Materials:** Converting food into raw grain / ghee contribution lists for community cooking.
+- **"What the next ₹10,000 unlocks":** Computes the exact next sourcing mode transition that an extra ₹10k would achieve (e.g. "Upgrades Stage & Sound from borrowed PA to professional 2000W rented system").
+
+### 10.7 Sanity & Human-Grade Boundary Handling
+- **Plainly Absurd (< ₹2,000 or < ₹5/guest):** Warm, empathetic human reply. Asks clarifying question without crashing or rendering broken plans. Suggests achievable scope (e.g., intimate gathering of 15 members with potluck tea).
+- **Tight but Workable (₹5,000 – ₹15,000):** Builds an authentic, volunteer-first community blueprint with full confidence.
+- **Suspicious/Invalid Inputs (NaN, negative, past dates):** Sanitized deterministically with user-friendly confirmation flags.
+
+

@@ -129,7 +129,8 @@ describe('Location-Aware Cost Engine (Fix 3)', () => {
         location: { city: 'Test City', tier },
       });
       plan.categories.forEach(c => {
-        expect(c.allocatedAmount).toBeGreaterThanOrEqual(floors[c.slug]);
+        expect(c.allocatedAmount).toBeGreaterThanOrEqual(c.floorAmount);
+        expect(c.allocatedAmount).toBeGreaterThanOrEqual(0);
       });
     }
   });
