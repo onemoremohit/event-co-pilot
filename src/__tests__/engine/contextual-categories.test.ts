@@ -120,3 +120,4 @@ describe('Event Archetype & Contextual Category Engine', () => {
     expect(foodTask!.title).toBe('Finalize Post-Show Dinner & Green Room Hospitality');
   });
 });
+

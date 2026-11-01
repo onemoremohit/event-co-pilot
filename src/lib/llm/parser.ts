@@ -218,6 +218,45 @@ export function extractFieldsFromText(text: string, baseDate = new Date()): Extr
       result.eventDate = target.toISOString().split('T')[0];
     }
 
+    // Weekend handling: "next weekend", "this weekend", "next month weekend", "weekend"
+    if (!result.eventDate && (lower.includes('next weekend') || lower.includes('this weekend') || lower.includes('weekend'))) {
+      const target = new Date(baseDate.getTime());
+      const currentDay = target.getUTCDay(); // 0 is Sunday, 6 is Saturday
+      const daysUntilSaturday = ((6 - currentDay + 7) % 7) || 7;
+      const addDays = lower.includes('next weekend') || lower.includes('next month weekend')
+        ? daysUntilSaturday + 7
+        : daysUntilSaturday;
+      target.setUTCDate(target.getUTCDate() + addDays);
+      result.eventDate = target.toISOString().split('T')[0];
+    }
+
+    // Relative months: "in 2 months", "next month"
+    const monthsAheadMatch = lower.match(/(?:in\s*)?(\d+)\s*months?/i);
+    if (!result.eventDate && monthsAheadMatch) {
+      const count = parseInt(monthsAheadMatch[1], 10);
+      const target = new Date(baseDate.getTime());
+      target.setUTCMonth(target.getUTCMonth() + count);
+      result.eventDate = target.toISOString().split('T')[0];
+    } else if (!result.eventDate && lower.includes('next month')) {
+      const target = new Date(baseDate.getTime());
+      target.setUTCMonth(target.getUTCMonth() + 1);
+      result.eventDate = target.toISOString().split('T')[0];
+    }
+
+    // Relative weeks shortcut: "next week"
+    if (!result.eventDate && lower.includes('next week')) {
+      const target = new Date(baseDate.getTime());
+      target.setUTCDate(target.getUTCDate() + 7);
+      result.eventDate = target.toISOString().split('T')[0];
+    }
+
+    // "tomorrow"
+    if (!result.eventDate && lower.includes('tomorrow')) {
+      const target = new Date(baseDate.getTime());
+      target.setUTCDate(target.getUTCDate() + 1);
+      result.eventDate = target.toISOString().split('T')[0];
+    }
+
     // Natural month-day: "15 December", "15th Dec", "December 15"
     const months = ['january', 'february', 'march', 'april', 'may', 'june', 'july', 'august', 'september', 'october', 'november', 'december'];
     const shortMonths = ['jan', 'feb', 'mar', 'apr', 'may', 'jun', 'jul', 'aug', 'sep', 'oct', 'nov', 'dec'];

@@ -40,6 +40,18 @@ describe('Input Parser & Honest Extraction (Fix 1 & Fix 2)', () => {
 
     const monthFirst = extractFieldsFromText('nov 11th');
     expect(monthFirst?.eventDate).toContain('-11-11');
+
+    const nextWeekend = extractFieldsFromText('next weekend');
+    expect(nextWeekend?.eventDate).toBeDefined();
+
+    const thisWeekend = extractFieldsFromText('this weekend');
+    expect(thisWeekend?.eventDate).toBeDefined();
+
+    const inTwoWeeks = extractFieldsFromText('In 2 weeks');
+    expect(inTwoWeeks?.eventDate).toBeDefined();
+
+    const inFourWeeks = extractFieldsFromText('In 4 weeks');
+    expect(inFourWeeks?.eventDate).toBeDefined();
   });
 
   it('extracts event sub-types and priorities accurately', () => {

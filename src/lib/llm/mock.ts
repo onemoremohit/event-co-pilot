@@ -84,10 +84,16 @@ export class MockLLMProvider implements LLMProvider {
     }
 
     if (sanity.flags.includes('past_date') || sanity.flags.includes('zero_or_negative_guests') || sanity.flags.includes('zero_or_negative_budget')) {
+      let quickReplies = ['In 2 weeks', 'In 4 weeks', 'In 6 weeks', 'In 8 weeks'];
+      if (sanity.flags.includes('zero_or_negative_guests')) {
+        quickReplies = ['50 guests', '100 guests', '150 guests', '200 guests'];
+      } else if (sanity.flags.includes('zero_or_negative_budget')) {
+        quickReplies = ['₹50,000', '₹1,50,000', '₹3,00,000', '₹5,00,000'];
+      }
       return {
         message: sanity.humanMessage,
         profileUpdate: extracted,
-        suggestedQuickReplies: ['In 3 weeks', 'In 6 weeks', '50 guests', '100 guests']
+        suggestedQuickReplies: quickReplies
       };
     }
 
@@ -127,9 +133,9 @@ export class MockLLMProvider implements LLMProvider {
       const perHead = Math.round(updated.totalBudget.amount / updated.guestCount);
       const perHeadText = `With ₹${updated.totalBudget.amount.toLocaleString('en-IN')} for ${updated.guestCount} guests, your per-head capacity is ₹${perHead.toLocaleString('en-IN')}. `;
       return {
-        message: `${perHeadText}When is the celebration taking place? You can specify a date (e.g. 15 December) or timeframe (e.g. in 6 weeks, in 3 weeks).`,
+        message: `${perHeadText}When is the celebration taking place? You can select a timeframe below or type a date:`,
         profileUpdate: extracted,
-        suggestedQuickReplies: ['In 3 weeks', 'In 6 weeks', 'December 15th', 'Next month weekend']
+        suggestedQuickReplies: ['In 2 weeks', 'In 4 weeks', 'In 6 weeks', 'In 8 weeks']
       };
     }
 
