@@ -88,9 +88,16 @@ export function EventProvider({ children }: { children: ReactNode }) {
     setPlan(updated);
   };
 
+  const handleSetActiveTab = (tab: AppTab) => {
+    setActiveTab(tab);
+    if (typeof window !== 'undefined') {
+      window.scrollTo({ top: 0, left: 0, behavior: 'instant' });
+    }
+  };
+
   const commitGeneratedPlan = async (fullPlan: EventPlan) => {
     setPlan(fullPlan);
-    setActiveTab('dashboard');
+    handleSetActiveTab('dashboard');
   };
 
   const runWhatIfScenario = (inputChanges: ScenarioInput): ScenarioResult | null => {
@@ -325,7 +332,7 @@ export function EventProvider({ children }: { children: ReactNode }) {
       value={{
         plan,
         activeTab,
-        setActiveTab,
+        setActiveTab: handleSetActiveTab,
         isLoading,
         isDemoRunning,
         setPlan,

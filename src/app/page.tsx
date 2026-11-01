@@ -57,6 +57,13 @@ function AppContent() {
       .catch(err => console.warn('Health check failed:', err));
   }, []);
 
+  // Always reset scroll to the starting point of the page when switching tabs or landing on dashboard
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      window.scrollTo({ top: 0, left: 0, behavior: 'instant' });
+    }
+  }, [activeTab]);
+
   // Compute completeness strictly based on actual filled fields (FIX 1)
   const completeness = React.useMemo(() => {
     let score = 0;
@@ -144,6 +151,9 @@ function AppContent() {
       const json = await res.json();
       if (json.success && json.data) {
         await commitGeneratedPlan(json.data);
+        if (typeof window !== 'undefined') {
+          window.scrollTo({ top: 0, left: 0, behavior: 'instant' });
+        }
         try {
           confetti({
             particleCount: 80,
