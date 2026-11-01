@@ -40,11 +40,16 @@ export function IntakeChat({
     'Neighborhood Community Gathering'
   ]);
   const [candidatePlans, setCandidatePlans] = useState<PlanStyle[]>([]);
-  const messagesEndRef = useRef<HTMLDivElement>(null);
+  const messagesContainerRef = useRef<HTMLDivElement>(null);
   const prevSubTypeRef = useRef<string | undefined>(currentProfile.eventSubType);
 
   const scrollToBottom = () => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+    if (messagesContainerRef.current) {
+      messagesContainerRef.current.scrollTo({
+        top: messagesContainerRef.current.scrollHeight,
+        behavior: 'smooth'
+      });
+    }
   };
 
   useEffect(() => {
@@ -292,6 +297,7 @@ export function IntakeChat({
         </div>
 
         <button
+          type="button"
           onClick={onStartDemo}
           disabled={isDemoRunning || isGenerating}
           className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-white text-amber-900 text-xs font-bold hover:bg-amber-50 shadow-sm transition-all active:scale-95 disabled:opacity-50"
@@ -311,7 +317,7 @@ export function IntakeChat({
       </div>
 
       {/* Messages Scroll Area */}
-      <div className="flex-1 overflow-y-auto p-4 sm:p-5 space-y-4 bg-slate-50/50">
+      <div ref={messagesContainerRef} className="flex-1 overflow-y-auto p-4 sm:p-5 space-y-4 bg-slate-50/50">
         {messages.map(msg => (
           <div
             key={msg.id}
@@ -364,6 +370,7 @@ export function IntakeChat({
               {candidatePlans.map(style => (
                 <button
                   key={style.id}
+                  type="button"
                   onClick={() => handleSelectPlanStyle(style)}
                   className="text-left bg-white p-3.5 rounded-xl border border-amber-200 hover:border-amber-400 hover:bg-amber-50/50 transition-all shadow-sm hover:shadow group"
                 >
@@ -394,8 +401,6 @@ export function IntakeChat({
             </div>
           </div>
         )}
-
-        <div ref={messagesEndRef} />
       </div>
 
       {/* Suggested Quick Replies */}
@@ -404,7 +409,11 @@ export function IntakeChat({
           {quickReplies.map((reply, i) => (
             <button
               key={i}
-              onClick={() => handleSendMessage(reply)}
+              type="button"
+              onClick={e => {
+                e.preventDefault();
+                handleSendMessage(reply);
+              }}
               className="text-xs font-medium bg-white hover:bg-amber-100/70 text-amber-900 border border-amber-200 px-3 py-1.5 rounded-full transition-colors shadow-2xs active:scale-95"
             >
               {reply}

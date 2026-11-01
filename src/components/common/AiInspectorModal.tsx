@@ -151,3 +151,4 @@ export function AiInspectorModal({ isOpen, onClose }: AiInspectorModalProps) {
     </div>
   );
 }
+
