@@ -51,15 +51,15 @@ export function Navbar({ onReset }: NavbarProps) {
           </div>
           <div>
             <div className="flex items-center gap-2">
-              <span className="font-bold text-base sm:text-lg tracking-tight bg-gradient-to-r from-amber-900 to-orange-800 bg-clip-text text-transparent">
+              <span className="font-extrabold text-base sm:text-lg tracking-tight bg-gradient-to-r from-amber-900 via-orange-800 to-amber-900 bg-clip-text text-transparent">
                 Event Co-pilot
               </span>
-              <span className="text-[10px] font-semibold bg-amber-100 text-amber-800 px-2 py-0.5 rounded-full border border-amber-300">
-                Cultural Community
+              <span className="text-[10px] font-bold bg-amber-100 text-amber-900 px-2 py-0.5 rounded-full border border-amber-300">
+                Cultural Community Events
               </span>
             </div>
             <p className="text-[11px] text-slate-500 hidden sm:block">
-              {plan?.profile.eventName || 'Hack2Skills PromptWars 5 • Celebration Assistant'}
+              {plan?.profile.eventName || 'Specialized in Society Festivals, Cultural Nights & Neighborhood Gatherings'}
             </p>
           </div>
         </div>
@@ -110,12 +110,12 @@ export function Navbar({ onReset }: NavbarProps) {
               key={tab.id}
               disabled={isDisabled}
               onClick={() => setActiveTab(tab.id)}
-              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold whitespace-nowrap transition-all ${
+              className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg text-xs font-bold whitespace-nowrap transition-all ${
                 isActive
-                  ? 'bg-amber-600 text-white shadow-2xs'
+                  ? 'bg-gradient-to-r from-amber-600 to-orange-600 text-white shadow-sm shadow-amber-600/20'
                   : isDisabled
                   ? 'text-slate-300 cursor-not-allowed'
-                  : 'text-slate-600 hover:bg-amber-50 hover:text-amber-900 cursor-pointer'
+                  : 'text-slate-600 hover:bg-amber-50 hover:text-amber-900 cursor-pointer active:scale-95'
               }`}
             >
               {tab.icon}

@@ -175,14 +175,17 @@ export function IntakeChat({
   return (
     <div className="flex flex-col h-[650px] bg-white rounded-2xl border border-slate-200/80 shadow-sm overflow-hidden">
       {/* Chat Header */}
-      <div className="bg-gradient-to-r from-amber-500 to-orange-600 px-5 py-3.5 text-white flex items-center justify-between shadow-sm">
+      <div className="bg-gradient-to-r from-amber-600 via-orange-600 to-amber-700 px-5 py-3.5 text-white flex items-center justify-between shadow-sm">
         <div className="flex items-center gap-2.5">
-          <div className="w-8 h-8 rounded-lg bg-white/20 backdrop-blur flex items-center justify-center text-white font-bold">
+          <div className="w-8 h-8 rounded-lg bg-white/20 backdrop-blur flex items-center justify-center text-white font-bold shadow-inner">
             <Sparkles className="w-4 h-4" />
           </div>
           <div>
-            <h2 className="font-bold text-sm tracking-tight">Intake Assistant</h2>
-            <p className="text-[11px] text-amber-100">Live profiling with zero arithmetic hallucination</p>
+            <div className="flex items-center gap-2">
+              <h2 className="font-extrabold text-sm tracking-tight">Cultural Community Intake Assistant</h2>
+              <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" title="Ready to assist" />
+            </div>
+            <p className="text-[11px] text-amber-100">Live planning for society festivals, stage nights & gatherings</p>
           </div>
         </div>
 

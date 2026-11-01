@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import { EventProvider, useEvent } from '@/context/EventContext';
 import { Navbar } from '@/components/layout/Navbar';
+import { EventHeadlineBanner } from '@/components/layout/EventHeadlineBanner';
 import { IntakeChat } from '@/components/chat/IntakeChat';
 import { LiveProfileCard } from '@/components/chat/LiveProfileCard';
 import { BudgetBreakdown } from '@/components/dashboard/BudgetBreakdown';
@@ -173,6 +174,13 @@ function AppContent() {
       <Navbar onReset={handleResetAll} />
 
       <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6">
+        {/* Core Event Focus Headline Banner */}
+        <EventHeadlineBanner
+          currentSubType={draftProfile.eventSubType}
+          onSelectSubType={subType => handleProfileUpdate({ eventSubType: subType })}
+          planActive={Boolean(plan)}
+        />
+
         {/* Priya Demo Guide Banner (visible ONLY when demo plan is active) */}
         {plan && plan.profile.id === 'priya-demo-diwali-2026' && (
           <div className="mb-6 bg-gradient-to-r from-amber-600 via-orange-600 to-amber-700 rounded-2xl p-4 text-white shadow-md shadow-orange-500/15 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">

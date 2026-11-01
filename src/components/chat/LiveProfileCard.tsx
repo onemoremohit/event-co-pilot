@@ -82,20 +82,20 @@ export function LiveProfileCard({
         {/* Header */}
         <div className="flex items-center justify-between border-b border-slate-100 pb-3">
           <div className="flex items-center gap-2">
-            <span className="text-xl">
-              {profile.eventSubType === 'cultural_night' ? '🎭' : profile.eventSubType === 'neighborhood' ? '🏘️' : profile.eventSubType === 'festival' ? '🎉' : '📋'}
+            <span className="text-2xl p-1.5 bg-amber-50 rounded-xl border border-amber-200">
+              {profile.eventSubType === 'cultural_night' ? '🎭' : profile.eventSubType === 'neighborhood' ? '🤝' : profile.eventSubType === 'festival' ? '🪔' : '📋'}
             </span>
             <div>
-              <h2 className="font-bold text-slate-900 text-sm leading-tight">
+              <h2 className="font-extrabold text-slate-900 text-sm leading-tight">
                 {profile.eventName || 'Live Event Profile'}
               </h2>
-              <span className="text-[11px] text-slate-500 capitalize">
-                {profile.eventSubType ? `${profile.eventSubType.replace('_', ' ')} Celebration` : 'Event type: Not set yet'}
+              <span className="text-[11px] text-amber-800 font-semibold bg-amber-50 px-1.5 py-0.2 rounded border border-amber-200 inline-block mt-0.5 capitalize">
+                {profile.eventSubType ? `${profile.eventSubType.replace('_', ' ')} Preset` : 'Cultural Preset: Pending'}
               </span>
             </div>
           </div>
           <div className="text-right">
-            <span className={`text-xs font-bold px-2 py-0.5 rounded-full border ${
+            <span className={`text-xs font-bold px-2.5 py-1 rounded-full border shadow-2xs ${
               completeness >= 80
                 ? 'text-emerald-800 bg-emerald-50 border-emerald-200'
                 : completeness > 0
