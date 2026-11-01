@@ -30,6 +30,16 @@ describe('Input Parser & Honest Extraction (Fix 1 & Fix 2)', () => {
 
     const decDate = extractFieldsFromText('scheduled on 15 December');
     expect(decDate?.eventDate).toContain('-12-15');
+
+    const dandiyaNov = extractFieldsFromText('dandiya night on 11th of nov');
+    expect(dandiyaNov?.eventSubType).toBe('festival');
+    expect(dandiyaNov?.eventDate).toContain('-11-11');
+
+    const novEleventh = extractFieldsFromText('11th of november');
+    expect(novEleventh?.eventDate).toContain('-11-11');
+
+    const monthFirst = extractFieldsFromText('nov 11th');
+    expect(monthFirst?.eventDate).toContain('-11-11');
   });
 
   it('extracts event sub-types and priorities accurately', () => {

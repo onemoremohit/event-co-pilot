@@ -149,6 +149,8 @@ export function extractFieldsFromText(text: string, baseDate = new Date()): Extr
   if (
     lower.includes('diwali') ||
     lower.includes('navratri') ||
+    lower.includes('dandiya') ||
+    lower.includes('garba') ||
     lower.includes('durga puja') ||
     lower.includes('puja') ||
     lower.includes('festival') ||
@@ -157,7 +159,7 @@ export function extractFieldsFromText(text: string, baseDate = new Date()): Extr
   ) {
     result.eventSubType = 'festival';
     if (lower.includes('diwali')) result.eventName = 'Diwali Festival Celebration';
-    else if (lower.includes('navratri')) result.eventName = 'Navratri Garba & Dandiya Festival';
+    else if (lower.includes('dandiya') || lower.includes('garba') || lower.includes('navratri')) result.eventName = 'Dandiya & Garba Night Festival';
     else if (lower.includes('durga puja')) result.eventName = 'Durga Puja Cultural Celebration';
     else result.eventName = 'Community Festival Celebration';
   } else if (
@@ -221,16 +223,33 @@ export function extractFieldsFromText(text: string, baseDate = new Date()): Extr
     const shortMonths = ['jan', 'feb', 'mar', 'apr', 'may', 'jun', 'jul', 'aug', 'sep', 'oct', 'nov', 'dec'];
 
     if (!result.eventDate) {
-      const dayMonthMatch = lower.match(/(\d{1,2})(?:st|nd|rd|th)?\s+([a-z]+)/i);
+      // Format 1: "11th of Nov", "11 Nov", "15 December 2026"
+      const dayMonthMatch = lower.match(/(\d{1,2})(?:st|nd|rd|th)?(?:\s+of)?\s+([a-z]+)(?:\s*,?\s*(\d{4}))?/i);
+      // Format 2: "Nov 11", "November 11th", "Dec 15 2026"
+      const monthDayMatch = lower.match(/([a-z]+)\s+(\d{1,2})(?:st|nd|rd|th)?(?:\s*,?\s*(\d{4}))?/i);
+
+      let day: number | null = null;
+      let mStr: string | null = null;
+      let explicitYear: number | null = null;
+
       if (dayMonthMatch) {
-        const day = parseInt(dayMonthMatch[1], 10);
-        const mStr = dayMonthMatch[2].toLowerCase();
+        day = parseInt(dayMonthMatch[1], 10);
+        mStr = dayMonthMatch[2].toLowerCase();
+        if (dayMonthMatch[3]) explicitYear = parseInt(dayMonthMatch[3], 10);
+      } else if (monthDayMatch) {
+        mStr = monthDayMatch[1].toLowerCase();
+        day = parseInt(monthDayMatch[2], 10);
+        if (monthDayMatch[3]) explicitYear = parseInt(monthDayMatch[3], 10);
+      }
+
+      if (day && mStr) {
         let mIdx = months.indexOf(mStr);
         if (mIdx === -1) mIdx = shortMonths.indexOf(mStr);
         if (mIdx !== -1) {
-          const year = baseDate.getUTCFullYear();
+          const year = explicitYear || baseDate.getUTCFullYear();
           const target = new Date(Date.UTC(year, mIdx, day));
-          if (target < baseDate) {
+          // If no explicit year was given and date has already passed in current year, roll over to next year
+          if (!explicitYear && target < baseDate) {
             target.setUTCFullYear(year + 1);
           }
           result.eventDate = target.toISOString().split('T')[0];

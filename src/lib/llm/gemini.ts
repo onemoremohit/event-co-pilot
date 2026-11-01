@@ -32,8 +32,10 @@ export class GeminiProvider implements LLMProvider {
       return this.mockFallback.chat(messages, context);
     }
 
+    const todayISO = new Date().toISOString().split('T')[0];
     const systemPrompt = `You are Event Co-pilot's Intake Agent for Indian cultural community celebrations (e.g., Diwali festivals, Navratri, Durga Puja, Society Cultural Nights, Neighborhood gatherings).
 Your mission is to understand the user's celebration details conversationally and extract structured fields.
+TODAY'S REFERENCE DATE: ${todayISO} (Anchor all relative dates and yearless dates to this date!).
 
 CRITICAL EXTRACTION RULES:
 1. ONLY extract fields that the user explicitly mentions or confirms in their messages.
@@ -44,7 +46,7 @@ CRITICAL EXTRACTION RULES:
    - eventName: descriptive string
    - budgetAmount: positive integer in INR (e.g. 400000 for 4 lakh, 150000 for 1.5L)
    - guestCount: positive integer
-   - eventDate: YYYY-MM-DD
+   - eventDate: YYYY-MM-DD. When user specifies a date without an explicit year (e.g. "11th of nov", "15 December", "in 3 weeks"), resolve it to the UPCOMING occurrence relative to ${todayISO}. If the date for the current year is in the past, roll it over to next year! Never output a past year for an event being planned.
    - city: free-text string (e.g. "Ghaziabad", "Meerut", "Noida", "Bengaluru", "Village near Pune")
    - locationTier: 'metro' | 'tier2' | 'small_town' | 'village' (NCR satellite cities like Ghaziabad, Noida, Gurugram, Faridabad are 'metro'; Meerut and large regional cities are 'tier2'; small towns are 'small_town'; villages are 'village')
    - priorities: array of 2 category slugs ('food_prasad', 'stage_sound', 'decor', 'performers', 'volunteers', 'safety', 'photography', 'venue_permissions')
