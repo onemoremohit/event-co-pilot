@@ -177,7 +177,12 @@ function AppContent() {
         {/* Core Event Focus Headline Banner */}
         <EventHeadlineBanner
           currentSubType={draftProfile.eventSubType}
-          onSelectSubType={subType => handleProfileUpdate({ eventSubType: subType })}
+          onSelectSubType={subType =>
+            handleProfileUpdate({
+              eventSubType: subType,
+              eventName: subType ? `${subType.replace('_', ' ')} Celebration` : undefined
+            })
+          }
           planActive={Boolean(plan)}
         />
 

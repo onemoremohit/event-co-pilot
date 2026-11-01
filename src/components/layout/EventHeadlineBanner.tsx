@@ -5,7 +5,7 @@ import { Sparkles, ShieldCheck, Users, MapPin, Sliders, ChevronDown, ChevronUp }
 import { EventSubType } from '@/lib/types';
 
 interface EventHeadlineBannerProps {
-  onSelectSubType?: (subType: EventSubType) => void;
+  onSelectSubType?: (subType: EventSubType | undefined) => void;
   currentSubType?: EventSubType;
   planActive?: boolean;
 }
@@ -99,7 +99,11 @@ export function EventHeadlineBanner({
               return (
                 <div
                   key={preset.id}
-                  onClick={() => onSelectSubType && onSelectSubType(preset.id)}
+                  onClick={() => {
+                    if (onSelectSubType) {
+                      onSelectSubType(isSelected ? undefined : preset.id);
+                    }
+                  }}
                   className={`rounded-xl p-4 transition-all relative flex flex-col justify-between cursor-pointer border ${
                     isSelected
                       ? 'bg-gradient-to-br from-amber-500/25 to-orange-500/20 border-amber-400 shadow-md ring-2 ring-amber-400/50'
@@ -127,7 +131,9 @@ export function EventHeadlineBanner({
                   </div>
 
                   <div className="pt-3 mt-2 border-t border-white/10 flex items-center justify-between text-[11px]">
-                    <span className="text-amber-300/80 font-medium">Click to select archetype</span>
+                    <span className="text-amber-300/80 font-medium">
+                      {isSelected ? 'Click again to unselect' : 'Click to select archetype'}
+                    </span>
                     {isSelected && (
                       <span className="text-emerald-400 font-bold flex items-center gap-1">
                         ✓ Selected
@@ -163,3 +169,4 @@ export function EventHeadlineBanner({
     </div>
   );
 }
+
