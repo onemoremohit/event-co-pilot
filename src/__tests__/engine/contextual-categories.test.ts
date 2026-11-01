@@ -5,6 +5,29 @@ import { generateVendorChecklist } from '@/lib/engine/vendor';
 import { detectEventArchetype, getCategoryMetadata, getCandidatePlanStyles } from '@/lib/constants/cultural';
 import { EventProfile } from '@/lib/types';
 
+function createTestProfile(overrides: Partial<EventProfile> = {}): EventProfile {
+  return {
+    id: 'test-profile-1',
+    eventType: 'community',
+    eventSubType: 'festival',
+    eventName: 'Community Celebration',
+    eventDate: '2026-12-15',
+    planningStartDate: '2026-11-01',
+    totalBudget: { amount: 300000, currency: 'INR' },
+    guestCount: 200,
+    guestMix: { family: 50, elders: 20, kids: 20, colleagues: 5, friends: 5 },
+    experienceTier: 'normal',
+    priorities: { top2: ['food_prasad', 'stage_sound'], notes: '' },
+    location: { city: 'Test City', tier: 'tier2' },
+    specialRequirements: [],
+    profileCompleteness: 100,
+    intakeStatus: 'complete',
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+    ...overrides
+  };
+}
+
 describe('Event Archetype & Contextual Category Engine', () => {
   it('correctly detects event archetypes from user inputs', () => {
     expect(detectEventArchetype({ eventName: 'Dandiya Night Celebration', eventSubType: 'festival' })).toBe('dandiya_garba');
@@ -16,17 +39,15 @@ describe('Event Archetype & Contextual Category Engine', () => {
   });
 
   it('customizes categories for Dandiya Night: NO prasad, shows Food & Refreshments', () => {
-    const dandiyaProfile: EventProfile = {
+    const dandiyaProfile = createTestProfile({
       id: 'dandiya-test-1',
-      eventType: 'community',
-      eventSubType: 'festival',
       eventName: 'Gokuldham Society Dandiya & Garba Night',
       eventDate: '2026-11-11',
       totalBudget: { amount: 300000, currency: 'INR' },
       guestCount: 250,
       location: { city: 'Ahmedabad', tier: 'metro' },
       priorities: { top2: ['food_prasad', 'stage_sound'], notes: '' }
-    };
+    });
 
     const plan = allocateBudget(dandiyaProfile);
     const foodCat = plan.categories.find(c => c.slug === 'food_prasad');
@@ -70,17 +91,15 @@ describe('Event Archetype & Contextual Category Engine', () => {
   });
 
   it('preserves Prasad for religious pooja festivals', () => {
-    const poojaProfile: EventProfile = {
+    const poojaProfile = createTestProfile({
       id: 'pooja-test-1',
-      eventType: 'community',
-      eventSubType: 'festival',
       eventName: 'Durga Puja & Maha Bhog Celebration',
       eventDate: '2026-10-20',
       totalBudget: { amount: 200000, currency: 'INR' },
       guestCount: 150,
       location: { city: 'Kolkata', tier: 'metro' },
       priorities: { top2: ['food_prasad', 'decor'], notes: '' }
-    };
+    });
 
     const plan = allocateBudget(poojaProfile);
     const foodCat = plan.categories.find(c => c.slug === 'food_prasad');
@@ -97,9 +116,8 @@ describe('Event Archetype & Contextual Category Engine', () => {
   });
 
   it('customizes categories for Cultural Performance Night: shows Dinner Buffet & Hospitality', () => {
-    const culturalProfile: EventProfile = {
+    const culturalProfile = createTestProfile({
       id: 'cultural-test-1',
-      eventType: 'community',
       eventSubType: 'cultural_night',
       eventName: 'Society Annual Cultural Performance Night',
       eventDate: '2026-12-05',
@@ -107,7 +125,7 @@ describe('Event Archetype & Contextual Category Engine', () => {
       guestCount: 100,
       location: { city: 'Bengaluru', tier: 'metro' },
       priorities: { top2: ['food_prasad', 'stage_sound'], notes: '' }
-    };
+    });
 
     const plan = allocateBudget(culturalProfile);
     const foodCat = plan.categories.find(c => c.slug === 'food_prasad');
@@ -120,4 +138,3 @@ describe('Event Archetype & Contextual Category Engine', () => {
     expect(foodTask!.title).toBe('Finalize Post-Show Dinner & Green Room Hospitality');
   });
 });
-
