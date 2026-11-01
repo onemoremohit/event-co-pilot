@@ -11,11 +11,26 @@ import {
   CheckSquare,
   Clock,
   Play,
-  RotateCcw
+  RotateCcw,
+  PlusCircle
 } from 'lucide-react';
 
-export function Navbar() {
+interface NavbarProps {
+  onReset?: () => void;
+}
+
+export function Navbar({ onReset }: NavbarProps) {
   const { plan, activeTab, setActiveTab, startPriyaDemo, isDemoRunning, resetToNewPlan } = useEvent();
+
+  const handleResetClick = async () => {
+    if (confirm('Start a new blank event plan? This clears the current profile and saved plan.')) {
+      if (onReset) {
+        onReset();
+      } else {
+        await resetToNewPlan();
+      }
+    }
+  };
 
   const tabs: { id: AppTab; label: string; icon: React.ReactNode; requiresPlan?: boolean }[] = [
     { id: 'intake', label: 'Intake Chat', icon: <MessageSquare className="w-3.5 h-3.5" /> },
@@ -50,21 +65,23 @@ export function Navbar() {
         </div>
 
         {/* Action Buttons */}
-        <div className="flex items-center gap-2.5">
-          {plan && (
-            <button
-              onClick={resetToNewPlan}
-              className="p-1.5 rounded-lg text-slate-400 hover:text-slate-600 hover:bg-slate-100 transition-colors"
-              title="Reset to New Plan"
-            >
-              <RotateCcw className="w-4 h-4" />
-            </button>
-          )}
+        <div className="flex items-center gap-2">
+          {/* Start New Plan / Reset Button */}
+          <button
+            onClick={handleResetClick}
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-slate-200 hover:border-slate-300 bg-white hover:bg-slate-50 text-slate-700 text-xs font-semibold shadow-2xs transition-all active:scale-95"
+            title="Clear all fields and start a new blank event plan"
+          >
+            <RotateCcw className="w-3.5 h-3.5 text-slate-500" />
+            <span className="hidden sm:inline">Start New Plan</span>
+            <span className="sm:hidden">Reset</span>
+          </button>
 
+          {/* Play Demo Button */}
           <button
             onClick={startPriyaDemo}
             disabled={isDemoRunning}
-            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-gradient-to-r from-amber-600 to-orange-600 hover:from-amber-700 hover:to-orange-700 text-white text-xs font-bold shadow-sm transition-all shadow-amber-500/25 active:scale-95 disabled:opacity-50"
+            className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg bg-gradient-to-r from-amber-600 to-orange-600 hover:from-amber-700 hover:to-orange-700 text-white text-xs font-bold shadow-sm transition-all shadow-amber-500/25 active:scale-95 disabled:opacity-50"
           >
             {isDemoRunning ? (
               <>
@@ -98,7 +115,7 @@ export function Navbar() {
                   ? 'bg-amber-600 text-white shadow-2xs'
                   : isDisabled
                   ? 'text-slate-300 cursor-not-allowed'
-                  : 'text-slate-600 hover:bg-amber-50 hover:text-amber-900'
+                  : 'text-slate-600 hover:bg-amber-50 hover:text-amber-900 cursor-pointer'
               }`}
             >
               {tab.icon}
@@ -110,4 +127,3 @@ export function Navbar() {
     </header>
   );
 }
-

@@ -23,6 +23,7 @@ export const ProfileUpdateSchema = z.object({
   experienceTier: z.enum(['normal', 'premium']).optional(),
   priorities: z.array(z.string()).max(2).optional(),
   city: z.string().optional(),
+  locationTier: z.enum(['metro', 'tier2', 'small_town', 'village']).optional(),
   specialRequirements: z.array(z.string()).optional()
 });
 

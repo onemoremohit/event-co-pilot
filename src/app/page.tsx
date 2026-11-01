@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { EventProvider, useEvent } from '@/context/EventContext';
 import { Navbar } from '@/components/layout/Navbar';
 import { IntakeChat } from '@/components/chat/IntakeChat';
@@ -11,8 +11,10 @@ import { WhatIfSimulator } from '@/components/what-if/WhatIfSimulator';
 import { VendorChecklist } from '@/components/vendors/VendorChecklist';
 import { TaskBoard } from '@/components/tasks/TaskBoard';
 import { DayOfRunSheet } from '@/components/tasks/DayOfRunSheet';
-import { EventProfile, EventPlan, BudgetCategorySlug } from '@/lib/types';
+import { EventProfile, EventPlan } from '@/lib/types';
+import { resolveLocationTier } from '@/lib/engine/location';
 import confetti from 'canvas-confetti';
+import { Sparkles, CheckCircle2, AlertCircle } from 'lucide-react';
 
 function AppContent() {
   const {
@@ -25,36 +27,42 @@ function AppContent() {
     updateVendorStatus,
     updateRunSheetEntry,
     startPriyaDemo,
-    isDemoRunning
+    isDemoRunning,
+    resetToNewPlan
   } = useEvent();
 
-  // Temporary local state for intake draft if no plan exists yet
+  // Fresh visitor starts with a completely EMPTY profile (FIX 1)
   const [draftProfile, setDraftProfile] = useState<Partial<EventProfile>>({
     eventType: 'community',
-    eventSubType: 'festival',
-    eventName: 'Society Festival Celebration 2026',
-    planningStartDate: '2026-11-01',
-    totalBudget: { amount: 400000, currency: 'INR' },
-    guestCount: 200,
     guestMix: { family: 50, elders: 20, kids: 20, colleagues: 5, friends: 5 },
-    experienceTier: 'normal',
-    priorities: { top2: ['food_prasad', 'stage_sound'], notes: '' },
-    location: { city: 'Bengaluru' },
     specialRequirements: [],
-    profileCompleteness: 60,
     intakeStatus: 'in_progress'
   });
 
   const [isGenerating, setIsGenerating] = useState(false);
+  const [healthStatus, setHealthStatus] = useState<{
+    provider: string;
+    model: string;
+    liveGeminiActive: boolean;
+  } | null>(null);
 
-  // Compute completeness
+  // Fetch health status on mount to show live AI indicator (FIX 4)
+  useEffect(() => {
+    fetch('/api/health')
+      .then(res => res.json())
+      .then(data => setHealthStatus(data))
+      .catch(err => console.warn('Health check failed:', err));
+  }, []);
+
+  // Compute completeness strictly based on actual filled fields (FIX 1)
   const completeness = React.useMemo(() => {
-    let score = 20;
+    let score = 0;
     if (draftProfile.eventSubType) score += 20;
+    if (draftProfile.totalBudget?.amount && draftProfile.totalBudget.amount > 0) score += 20;
+    if (draftProfile.guestCount && draftProfile.guestCount > 0) score += 20;
     if (draftProfile.eventDate) score += 20;
-    if (draftProfile.totalBudget?.amount) score += 20;
-    if (draftProfile.guestCount) score += 20;
-    return Math.min(100, score);
+    if (draftProfile.location?.city && draftProfile.location.city.trim()) score += 20;
+    return score;
   }, [draftProfile]);
 
   const handleProfileUpdate = (update: Partial<EventProfile>) => {
@@ -68,21 +76,39 @@ function AppContent() {
   };
 
   const handleGeneratePlan = async () => {
+    // Validate that all required fields are present (FIX 1 & FIX 2)
+    if (
+      !draftProfile.eventSubType ||
+      !draftProfile.totalBudget?.amount ||
+      !draftProfile.guestCount ||
+      !draftProfile.eventDate ||
+      !draftProfile.location?.city
+    ) {
+      alert('Please fill event type, budget, guest count, date, and location before generating your plan.');
+      return;
+    }
+
     setIsGenerating(true);
+
+    const city = draftProfile.location.city;
+    const locTier = draftProfile.location.tier || resolveLocationTier(city).tier;
 
     const fullProfile: EventProfile = {
       id: `event-${Date.now()}`,
       eventType: 'community',
-      eventSubType: draftProfile.eventSubType || 'festival',
-      eventName: draftProfile.eventName || 'Society Cultural Festival 2026',
-      eventDate: draftProfile.eventDate || '2026-12-15',
-      planningStartDate: draftProfile.planningStartDate || '2026-11-01',
-      totalBudget: draftProfile.totalBudget || { amount: 400000, currency: 'INR' },
-      guestCount: draftProfile.guestCount || 200,
+      eventSubType: draftProfile.eventSubType,
+      eventName: draftProfile.eventName || `${draftProfile.eventSubType.replace('_', ' ')} Celebration`,
+      eventDate: draftProfile.eventDate,
+      planningStartDate: new Date().toISOString().split('T')[0],
+      totalBudget: draftProfile.totalBudget,
+      guestCount: draftProfile.guestCount,
       guestMix: draftProfile.guestMix || { family: 50, elders: 20, kids: 20, colleagues: 5, friends: 5 },
       experienceTier: draftProfile.experienceTier || 'normal',
       priorities: draftProfile.priorities || { top2: ['food_prasad', 'stage_sound'], notes: '' },
-      location: draftProfile.location || { city: 'Bengaluru' },
+      location: {
+        city,
+        tier: locTier
+      },
       specialRequirements: draftProfile.specialRequirements || [],
       profileCompleteness: 100,
       intakeStatus: 'complete',
@@ -99,7 +125,6 @@ function AppContent() {
       const json = await res.json();
       if (json.success && json.data) {
         await commitGeneratedPlan(json.data);
-        // Celebration confetti
         try {
           confetti({
             particleCount: 80,
@@ -115,12 +140,22 @@ function AppContent() {
     }
   };
 
+  const handleResetAll = async () => {
+    await resetToNewPlan();
+    setDraftProfile({
+      eventType: 'community',
+      guestMix: { family: 50, elders: 20, kids: 20, colleagues: 5, friends: 5 },
+      specialRequirements: [],
+      intakeStatus: 'in_progress'
+    });
+  };
+
   return (
     <div className="min-h-screen bg-gradient-to-b from-amber-50/40 via-white to-orange-50/20 text-slate-900 flex flex-col font-sans">
-      <Navbar />
+      <Navbar onReset={handleResetAll} />
 
       <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6">
-        {/* Priya Demo Guide Banner */}
+        {/* Priya Demo Guide Banner (visible ONLY when demo plan is active) */}
         {plan && plan.profile.id === 'priya-demo-diwali-2026' && (
           <div className="mb-6 bg-gradient-to-r from-amber-600 via-orange-600 to-amber-700 rounded-2xl p-4 text-white shadow-md shadow-orange-500/15 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
             <div className="flex items-center gap-3">
@@ -128,7 +163,7 @@ function AppContent() {
               <div>
                 <h4 className="font-bold text-sm tracking-tight">Priya&apos;s Demo Story (Gokuldham Society Festival Night)</h4>
                 <p className="text-xs text-amber-100">
-                  Baseline generated: 200 guests, ₹4 Lakhs, 6 weeks. Now test the sudden RSVP surge (+50 guests).
+                  Baseline generated: 200 guests, ₹4 Lakhs, 6 weeks in Bengaluru. Now test the sudden RSVP surge (+50 guests).
                 </p>
               </div>
             </div>
@@ -215,11 +250,27 @@ function AppContent() {
         )}
       </main>
 
+      {/* Footer with AI Status Indicator (FIX 4) */}
       <footer className="border-t border-slate-200 bg-white py-4 mt-8 print:hidden">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col sm:flex-row items-center justify-between text-xs text-slate-500 gap-2">
-          <span>Event Co-pilot • Hack2Skills PromptWars 5 • Cultural Community Planner</span>
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col sm:flex-row items-center justify-between text-xs text-slate-500 gap-3">
+          <div className="flex items-center gap-2">
+            <span>Event Co-pilot • Hack2Skills PromptWars 5 • Cultural Planner</span>
+            <span className="text-slate-300">|</span>
+            {healthStatus ? (
+              <span className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[11px] font-semibold border ${
+                healthStatus.liveGeminiActive
+                  ? 'bg-emerald-50 text-emerald-800 border-emerald-200'
+                  : 'bg-amber-50 text-amber-800 border-amber-200'
+              }`}>
+                <span className={`w-1.5 h-1.5 rounded-full ${healthStatus.liveGeminiActive ? 'bg-emerald-500 animate-pulse' : 'bg-amber-500'}`} />
+                <span>AI: {healthStatus.liveGeminiActive ? `Gemini 2.5 Flash (Live)` : `Mock / Rule-Based Fallback`}</span>
+              </span>
+            ) : (
+              <span className="text-[11px] text-slate-400">Checking AI engine...</span>
+            )}
+          </div>
           <span className="font-mono text-[11px] bg-slate-100 text-slate-600 px-2 py-0.5 rounded">
-            All math deterministic • Zero arithmetic hallucinations
+            All math deterministic • Location-aware cost floors
           </span>
         </div>
       </footer>

@@ -14,6 +14,7 @@ import { ChatMessage, EventProfile, BudgetPlan } from '../types';
 
 export class GeminiProvider implements LLMProvider {
   name = 'GeminiProvider';
+  public readonly modelName = 'gemini-2.5-flash';
   private apiKey: string;
   private mockFallback: MockLLMProvider;
 
@@ -22,7 +23,7 @@ export class GeminiProvider implements LLMProvider {
     this.mockFallback = new MockLLMProvider();
   }
 
-  private hasKey(): boolean {
+  public hasKey(): boolean {
     return Boolean(this.apiKey && this.apiKey.trim().length > 5 && !this.apiKey.includes('placeholder'));
   }
 
@@ -31,35 +32,37 @@ export class GeminiProvider implements LLMProvider {
       return this.mockFallback.chat(messages, context);
     }
 
-    const systemPrompt = `You are Event Co-pilot's Intake Agent for cultural community celebrations (e.g., Diwali festivals, Navratri, Durga Puja, Society Cultural Nights, Neighborhood gatherings).
-Your mission is to understand the user's celebration details conversationally and populate the EventProfile.
+    const systemPrompt = `You are Event Co-pilot's Intake Agent for Indian cultural community celebrations (e.g., Diwali festivals, Navratri, Durga Puja, Society Cultural Nights, Neighborhood gatherings).
+Your mission is to understand the user's celebration details conversationally and extract structured fields.
 
-RULES:
-1. Speak in a warm, welcoming, Indian-event-friendly tone.
-2. Only gather information for cultural community events. Required fields:
+CRITICAL EXTRACTION RULES:
+1. ONLY extract fields that the user explicitly mentions or confirms in their messages.
+2. NEVER guess, assume, or inject default budgets, guest counts, dates, or cities that the user did not specify!
+3. If the user corrects a field (e.g., "make it 150 guests" or "actually budget is 2.5L"), update ONLY that field in profileUpdate.
+4. Required fields to gather:
    - eventSubType: 'festival' | 'cultural_night' | 'neighborhood'
-   - eventDate: YYYY-MM-DD
-   - budgetAmount: positive integer in INR
+   - eventName: descriptive string
+   - budgetAmount: positive integer in INR (e.g. 400000 for 4 lakh, 150000 for 1.5L)
    - guestCount: positive integer
+   - eventDate: YYYY-MM-DD
+   - city: free-text string (e.g. "Bengaluru", "Village near Pune", "Jaipur", "Small Town")
+   - locationTier: 'metro' | 'tier2' | 'small_town' | 'village' (based on the city/town)
    - priorities: array of 2 category slugs ('food_prasad', 'stage_sound', 'decor', 'performers', 'volunteers', 'safety', 'photography', 'venue_permissions')
-   - experienceTier: 'normal' | 'premium'
-   - city: string
-3. Ask ONE clear question at a time.
-4. When budget and guest count are known, mention the calculated per-head budget and present 2-3 candidate plan styles (Food-first, Look-first, Balanced, and DIY-Max if < 1200/head).
-5. Never hallucinate budget allocations or final numbers — explain that the deterministic calculation engine computes the exact rupee distribution.
-6. When all required fields are present, set isComplete to true.
+5. Ask ONE clear question at a time for the next missing field in order: event sub-type -> budget -> guest count -> date -> location -> priorities.
+6. When budget and guest count are known, mention the calculated per-head budget (budget ÷ guests) and present candidate plan styles (Food-first, Look-first, Balanced, and DIY-Max if < 1200/head).
+7. When all required fields are present and priorities chosen, set isComplete to true.
 
 Output format: Respond strictly with a JSON object matching this schema:
 {
-  "message": "Conversational response",
-  "profileUpdate": { ...fields extracted from user input... },
+  "message": "Conversational response asking for the next missing detail",
+  "profileUpdate": { ...ONLY the fields explicitly extracted from the user's message... },
   "suggestedQuickReplies": ["Option 1", "Option 2"],
   "candidatePlans": [ ...optional candidate styles... ],
   "isComplete": boolean
 }`;
 
     const formattedHistory = messages.map(m => `${m.role.toUpperCase()}: ${m.content}`).join('\n');
-    const prompt = `${systemPrompt}\n\nCURRENT PROFILE CONTEXT:\n${JSON.stringify(context, null, 2)}\n\nCHAT HISTORY:\n${formattedHistory}\n\nRespond with JSON:`;
+    const prompt = `${systemPrompt}\n\nCURRENT PROFILE CONTEXT:\n${JSON.stringify(context, null, 2)}\n\nCHAT HISTORY:\n${formattedHistory}\n\nRespond strictly with JSON:`;
 
     try {
       const result = await this.callGeminiWithRetry(prompt);
@@ -80,11 +83,12 @@ Output format: Respond strictly with a JSON object matching this schema:
       return this.mockFallback.generateExplanations(plan, profile);
     }
 
-    const prompt = `You are Event Co-pilot's Explain Agent. Given the deterministic budget allocation for "${profile.eventName}", write one concise, trustworthy justification sentence (under 15 words) for each budget category explaining why it is allocated this amount.
+    const prompt = `You are Event Co-pilot's Explain Agent. Given the deterministic budget allocation for "${profile.eventName}" in ${profile.location.city || 'India'}, write one concise, trustworthy justification sentence (under 15 words) for each budget category explaining why it is allocated this amount.
 
 PLAN SUMMARY:
 - Total: ₹${plan.totalBudget}
 - Guests: ${profile.guestCount}
+- City / Tier: ${profile.location.city} (${profile.location.tier || 'standard'})
 - Top Priorities: ${profile.priorities.top2.join(', ')}
 - Categories:
 ${plan.categories.map(c => `- ${c.slug} (${c.label}): ₹${c.allocatedAmount} (floor: ₹${c.floorAmount})`).join('\n')}
@@ -143,8 +147,8 @@ Output format: Strictly a JSON object:
     }
   }
 
-  private async callGeminiWithRetry(prompt: string, isRetry = false): Promise<any> {
-    const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${this.apiKey}`;
+  private async callGeminiWithRetry(prompt: string): Promise<any> {
+    const url = `https://generativelanguage.googleapis.com/v1beta/models/${this.modelName}:generateContent?key=${this.apiKey}`;
 
     const response = await fetch(url, {
       method: 'POST',
@@ -157,7 +161,7 @@ Output format: Strictly a JSON object:
         ],
         generationConfig: {
           responseMimeType: 'application/json',
-          temperature: 0.3
+          temperature: 0.2
         }
       }),
       signal: AbortSignal.timeout(10000) // 10 second timeout
@@ -176,4 +180,3 @@ Output format: Strictly a JSON object:
     return JSON.parse(candidateText);
   }
 }
-

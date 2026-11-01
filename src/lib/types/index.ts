@@ -28,6 +28,7 @@ export interface Priorities {
 export interface Location {
   city: string;
   region?: string;
+  tier?: 'metro' | 'tier2' | 'small_town' | 'village';
 }
 
 export interface EventProfile {
@@ -196,6 +197,7 @@ export interface ScenarioInput {
   budget?: number | null;
   guestCount?: number | null;
   eventDate?: string | null;
+  locationTier?: 'metro' | 'tier2' | 'small_town' | 'village' | null;
   lockedCategories: BudgetCategorySlug[];
 }
 

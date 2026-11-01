@@ -4,106 +4,115 @@ import {
   IntakeResponse,
   ExplainResponse,
   VendorMessageRequest,
-  VendorMessageResponse,
-  ProfileUpdateData
+  VendorMessageResponse
 } from './provider';
-import { ChatMessage, EventProfile, BudgetPlan } from '../types';
+import { ChatMessage, EventProfile, BudgetPlan, BudgetCategorySlug } from '../types';
 import { PLAN_STYLES } from '../constants/cultural';
+import { extractFieldsFromText } from './parser';
+import { resolveLocationTier } from '../engine/location';
 
 export class MockLLMProvider implements LLMProvider {
   name = 'MockLLMProvider';
 
   async chat(messages: ChatMessage[], context: IntakeContext): Promise<IntakeResponse> {
-    const lastUserMessage = [...messages].reverse().find(m => m.role === 'user')?.content.toLowerCase() || '';
-    const profile = context.currentProfile;
+    const lastUserMessage = [...messages].reverse().find(m => m.role === 'user')?.content || '';
+    
+    // 1. Run deterministic extraction on user's message
+    const extracted = extractFieldsFromText(lastUserMessage);
 
-    // 1. Initial Greeting / Subtype selection
-    if (!profile.eventSubType && !profile.eventName) {
-      if (lastUserMessage.includes('diwali') || lastUserMessage.includes('festival') || lastUserMessage.includes('navratri') || lastUserMessage.includes('puja')) {
-        return {
-          message: 'Splendid! Festival celebrations bring the entire community together. What is the target date for your festival event?',
-          profileUpdate: {
-            eventName: 'Community Festival Celebration',
-            eventSubType: 'festival'
-          },
-          suggestedQuickReplies: ['6 weeks from now', 'Next month on weekend', 'December 15th']
-        };
-      }
-      if (lastUserMessage.includes('night') || lastUserMessage.includes('dance') || lastUserMessage.includes('performance')) {
-        return {
-          message: 'A cultural performance night sounds wonderful! When are you planning to stage the event?',
-          profileUpdate: {
-            eventName: 'Society Cultural Night',
-            eventSubType: 'cultural_night'
-          },
-          suggestedQuickReplies: ['In 6 weeks', 'Mid December', 'On Saturday evening']
-        };
-      }
+    // 2. Merge extracted fields onto current context
+    const current = context.currentProfile || {};
+    const updated = {
+      ...current,
+      eventSubType: extracted.eventSubType ?? current.eventSubType,
+      eventName: extracted.eventName ?? current.eventName,
+      eventDate: extracted.eventDate ?? current.eventDate,
+      totalBudget: extracted.budgetAmount
+        ? { amount: extracted.budgetAmount, currency: 'INR' }
+        : current.totalBudget,
+      guestCount: extracted.guestCount ?? current.guestCount,
+      experienceTier: extracted.experienceTier ?? current.experienceTier ?? 'normal',
+      priorities: extracted.priorities && extracted.priorities.length > 0
+        ? { top2: extracted.priorities as [BudgetCategorySlug, BudgetCategorySlug], notes: '' }
+        : current.priorities,
+      location: extracted.city
+        ? {
+            city: extracted.city,
+            tier: extracted.locationTier ?? resolveLocationTier(extracted.city).tier
+          }
+        : current.location
+    };
+
+    // If user's message was an explicit single-field correction
+    const isCorrection = (extracted.guestCount && current.guestCount && extracted.guestCount !== current.guestCount) ||
+                         (extracted.budgetAmount && current.totalBudget?.amount && extracted.budgetAmount !== current.totalBudget.amount);
+
+    // 3. Check what required fields are still missing in priority order
+    // Required: subType, budget, guests, date, location
+
+    if (!updated.eventSubType) {
       return {
-        message: 'Namaste! I am your Event Co-pilot for community celebrations. What type of celebration are we organizing?',
+        message: 'Namaste! Welcome to Event Co-pilot. Which type of community celebration are we planning today?',
+        profileUpdate: extracted,
         suggestedQuickReplies: [
-          'Diwali / Festival Mela',
-          'Society Cultural Night & Performances',
+          'Diwali / Festival Celebration',
+          'Society Cultural Performance Night',
           'Neighborhood Community Gathering'
         ]
       };
     }
 
-    // 2. Event Date
-    if (!profile.eventDate) {
-      const match = lastUserMessage.match(/(\d{4}-\d{2}-\d{2})|december\s*(\d{1,2})/i);
-      const targetDate = '2026-12-15'; // Default fallback date
-
+    if (!updated.totalBudget?.amount) {
+      const ack = updated.eventName ? `Great, planning for a ${updated.eventName}. ` : '';
       return {
-        message: 'Got it. Event date noted! Next, what is your total planned budget for the celebration in INR?',
-        profileUpdate: {
-          eventDate: targetDate
-        },
-        suggestedQuickReplies: ['₹2,50,000', '₹4,00,000', '₹6,00,000']
+        message: `${ack}What is your total planned budget in INR? (e.g. ₹2.5 Lakhs, 4L, ₹50,000)`,
+        profileUpdate: extracted,
+        suggestedQuickReplies: ['₹1,50,000', '₹3,00,000', '₹4,00,000', '₹6,00,000']
       };
     }
 
-    // 3. Total Budget
-    if (!profile.totalBudget?.amount) {
-      let amount = 400000;
-      if (lastUserMessage.includes('4') || lastUserMessage.includes('4l') || lastUserMessage.includes('400000') || lastUserMessage.includes('4 lakh')) {
-        amount = 400000;
-      } else if (lastUserMessage.includes('2') || lastUserMessage.includes('2.5') || lastUserMessage.includes('250000')) {
-        amount = 250000;
-      } else if (lastUserMessage.includes('6') || lastUserMessage.includes('600000')) {
-        amount = 600000;
+    if (!updated.guestCount) {
+      return {
+        message: `Budget noted: ₹${updated.totalBudget.amount.toLocaleString('en-IN')}. How many guests and residents are you expecting?`,
+        profileUpdate: extracted,
+        suggestedQuickReplies: ['60 guests', '150 guests', '200 guests', '300 guests']
+      };
+    }
+
+    if (!updated.eventDate) {
+      const perHead = Math.round(updated.totalBudget.amount / updated.guestCount);
+      const perHeadText = `With ₹${updated.totalBudget.amount.toLocaleString('en-IN')} for ${updated.guestCount} guests, your per-head capacity is ₹${perHead.toLocaleString('en-IN')}. `;
+      return {
+        message: `${perHeadText}When is the celebration taking place? You can specify a date (e.g. 15 December) or timeframe (e.g. in 6 weeks, in 3 weeks).`,
+        profileUpdate: extracted,
+        suggestedQuickReplies: ['In 3 weeks', 'In 6 weeks', 'December 15th', 'Next month weekend']
+      };
+    }
+
+    if (!updated.location?.city) {
+      return {
+        message: 'Which city, town, or village is the event located in? (This helps us calibrate local vendor and rental cost benchmarks).',
+        profileUpdate: extracted,
+        suggestedQuickReplies: ['Bengaluru (Metro)', 'Jaipur (Tier-2)', 'A Small Town', 'A Village / Rural Ground']
+      };
+    }
+
+    // 4. All required fields are present! Offer Candidate Plan Styles if not chosen yet
+    const perHead = Math.round(updated.totalBudget.amount / updated.guestCount);
+    const candidateStyles = PLAN_STYLES.filter(s => !s.perHeadThreshold || perHead <= s.perHeadThreshold);
+
+    if (!updated.priorities?.top2 || updated.priorities.top2.length === 0) {
+      const locRes = resolveLocationTier(updated.location.city);
+      let message = `All essential details gathered for ${updated.eventName} in ${updated.location.city} (${locRes.label})!\n\nPer-head budget is ₹${perHead.toLocaleString('en-IN')}. Select a planning style to prioritize your spend:`;
+
+      if (isCorrection) {
+        message = `Updated! Per-head budget is now ₹${perHead.toLocaleString('en-IN')}.\n\nSelect a planning style to complete your plan:`;
       }
 
       return {
-        message: `Budget recorded: ₹${amount.toLocaleString('en-IN')}. How many guests and residents are you expecting?`,
-        profileUpdate: {
-          budgetAmount: amount,
-          currency: 'INR'
-        },
-        suggestedQuickReplies: ['150 guests', '200 guests', '300 guests']
-      };
-    }
-
-    // 4. Guest Count & Feasibility check + Candidate Plans
-    if (!profile.guestCount) {
-      let guests = 200;
-      if (lastUserMessage.includes('200')) guests = 200;
-      else if (lastUserMessage.includes('150')) guests = 150;
-      else if (lastUserMessage.includes('300')) guests = 300;
-      else if (lastUserMessage.includes('250')) guests = 250;
-
-      const budget = profile.totalBudget.amount;
-      const perHead = Math.round(budget / guests);
-
-      // Candidate styles
-      const candidates = PLAN_STYLES.filter(s => !s.perHeadThreshold || perHead <= s.perHeadThreshold);
-
-      return {
-        message: `With ₹${budget.toLocaleString('en-IN')} for ${guests} guests, you have approximately ₹${perHead.toLocaleString('en-IN')} per head. That is a viable, balanced budget!\n\nTo tailor your plan, which planning style best aligns with your committee's vision?`,
-        profileUpdate: {
-          guestCount: guests
-        },
-        candidatePlans: candidates,
+        message,
+        profileUpdate: extracted,
+        candidatePlans: candidateStyles,
         suggestedQuickReplies: [
           'Food & Prasad First',
           'Look & Spectacle First',
@@ -112,33 +121,12 @@ export class MockLLMProvider implements LLMProvider {
       };
     }
 
-    // 5. Priorities & Tier
-    if (!profile.priorities?.top2 || profile.priorities.top2.length === 0) {
-      let top2: [string, string] = ['food_prasad', 'stage_sound'];
-      if (lastUserMessage.includes('look') || lastUserMessage.includes('decor')) {
-        top2 = ['decor', 'stage_sound'];
-      } else if (lastUserMessage.includes('food') || lastUserMessage.includes('prasad')) {
-        top2 = ['food_prasad', 'stage_sound'];
-      }
-
-      return {
-        message: 'Priorities confirmed! Which city or society locality is the venue located in?',
-        profileUpdate: {
-          priorities: top2,
-          experienceTier: 'normal'
-        },
-        suggestedQuickReplies: ['Bengaluru', 'Mumbai', 'Delhi NCR', 'Pune']
-      };
-    }
-
-    // 6. Finalization
+    // 5. Complete! Ready to generate plan
     return {
-      message: 'All core event parameters gathered! Your deterministic budget, backward timeline, and vendor checklists have been generated.',
-      profileUpdate: {
-        city: 'Bengaluru'
-      },
+      message: `Your celebration specifications are complete for ${updated.eventName} in ${updated.location.city}! Click "Generate Live Event Plan" to build your auditable budget, backward schedule, and vendor checklist.`,
+      profileUpdate: extracted,
       isComplete: true,
-      suggestedQuickReplies: ['View Event Dashboard', 'Open What-If Simulator']
+      suggestedQuickReplies: ['Generate Live Event Plan']
     };
   }
 
@@ -170,4 +158,3 @@ export class MockLLMProvider implements LLMProvider {
     };
   }
 }
-

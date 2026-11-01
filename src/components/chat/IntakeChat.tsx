@@ -4,6 +4,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import { ChatMessage, EventProfile, PlanStyle, BudgetCategorySlug } from '@/lib/types';
 import { Send, Sparkles, Check, Play, User, Bot, RefreshCw } from 'lucide-react';
 import { CULTURAL_CATEGORIES } from '@/lib/constants/cultural';
+import { resolveLocationTier } from '@/lib/engine/location';
 
 interface IntakeChatProps {
   currentProfile: Partial<EventProfile>;
@@ -101,7 +102,11 @@ export function IntakeChat({
             };
           }
           if (data.profileUpdate.city) {
-            update.location = { city: data.profileUpdate.city };
+            const locRes = resolveLocationTier(data.profileUpdate.city);
+            update.location = {
+              city: data.profileUpdate.city,
+              tier: data.profileUpdate.locationTier || locRes.tier
+            };
           }
           onProfileUpdate(update);
         }
@@ -125,7 +130,17 @@ export function IntakeChat({
         };
         setMessages(prev => [...prev, botMsg]);
 
-        if (data.isComplete) {
+        // Only trigger plan generation if all essential fields are present
+        const merged = { ...currentProfile, ...(data.profileUpdate || {}) };
+        const hasAllRequired = Boolean(
+          (merged.eventSubType || currentProfile.eventSubType) &&
+          (data.profileUpdate?.budgetAmount || currentProfile.totalBudget?.amount) &&
+          (merged.guestCount || currentProfile.guestCount) &&
+          (merged.eventDate || currentProfile.eventDate) &&
+          (data.profileUpdate?.city || currentProfile.location?.city)
+        );
+
+        if (data.isComplete && hasAllRequired) {
           onGeneratePlan();
         }
       }

@@ -10,6 +10,7 @@ import {
 import { allocateBudget, CategoryLockMap } from './budget';
 import { scheduleBackward } from './timeline';
 import { generateVendorChecklist } from './vendor';
+import { resolveLocationTier, LOCATION_TIERS, LocationTier } from './location';
 
 export interface ScenarioResult {
   newPlan: BudgetPlan;
@@ -35,6 +36,16 @@ function generateDiffReason(
   const reasons: string[] = [];
   const guestChange = (inputChanges.guestCount ?? oldProfile.guestCount) - oldProfile.guestCount;
   const budgetChange = (inputChanges.budget ?? oldProfile.totalBudget.amount) - oldProfile.totalBudget.amount;
+  const oldLocTier = oldProfile.location?.tier || resolveLocationTier(oldProfile.location?.city).tier;
+  const newLocTier = inputChanges.locationTier || oldLocTier;
+
+  if (newLocTier !== oldLocTier) {
+    const oldConfig = LOCATION_TIERS[oldLocTier];
+    const newConfig = LOCATION_TIERS[newLocTier];
+    reasons.push(
+      `Location benchmark shifted from ${oldConfig.label} (${oldConfig.baseMultiplier}x) to ${newConfig.label} (${newConfig.baseMultiplier}x)`
+    );
+  }
 
   if (slug === 'food_prasad' && guestChange !== 0) {
     reasons.push(
@@ -79,6 +90,9 @@ export function recomputeScenario(
   profile: EventProfile,
   inputChanges: ScenarioInput
 ): ScenarioResult {
+  const oldLocTier = profile.location?.tier || resolveLocationTier(profile.location?.city).tier;
+  const newLocTier: LocationTier = inputChanges.locationTier || oldLocTier;
+
   // 1. Create modified profile clone
   const updatedProfile: EventProfile = {
     ...profile,
@@ -92,6 +106,10 @@ export function recomputeScenario(
       ? Math.max(1, Math.round(inputChanges.guestCount))
       : profile.guestCount,
     eventDate: inputChanges.eventDate || profile.eventDate,
+    location: {
+      ...profile.location,
+      tier: newLocTier
+    },
     updatedAt: new Date().toISOString()
   };
 
@@ -105,8 +123,11 @@ export function recomputeScenario(
     }
   });
 
-  // 3. Re-run deterministic allocation and backward scheduling
-  const newPlan = allocateBudget(updatedProfile, { locks });
+  // 3. Re-run deterministic allocation and backward scheduling with location tier
+  const newPlan = allocateBudget(updatedProfile, {
+    locks,
+    overrideLocationTier: newLocTier
+  });
   newPlan.version = currentPlan.version + 1;
 
   const newTasks = scheduleBackward(updatedProfile);
@@ -163,7 +184,24 @@ export function recomputeScenario(
     });
   }
 
-  // 6. Timeline diffs if rush status or dates changed
+  // 6. Location tier diff
+  if (newLocTier !== oldLocTier) {
+    const oldConfig = LOCATION_TIERS[oldLocTier];
+    const newConfig = LOCATION_TIERS[newLocTier];
+    diffs.unshift({
+      category: 'overall',
+      field: 'locationTier',
+      oldValue: oldConfig.label,
+      newValue: newConfig.label,
+      delta: null,
+      deltaPercentage: null,
+      direction: newConfig.baseMultiplier > oldConfig.baseMultiplier ? 'increase' : 'decrease',
+      reason: `Location cost tier changed to ${newConfig.label} (${newConfig.baseMultiplier}x benchmark). Category minimum floors and baseline allocations adjusted accordingly.`,
+      severity: 'info'
+    });
+  }
+
+  // 7. Timeline diffs if rush status or dates changed
   if (newTasks.rushMode !== currentTasks.rushMode) {
     diffs.push({
       category: 'timeline',
@@ -187,4 +225,3 @@ export function recomputeScenario(
     diffs
   };
 }
-
