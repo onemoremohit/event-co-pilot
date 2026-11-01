@@ -45,10 +45,18 @@ CRITICAL EXTRACTION RULES:
    - budgetAmount: positive integer in INR (e.g. 400000 for 4 lakh, 150000 for 1.5L)
    - guestCount: positive integer
    - eventDate: YYYY-MM-DD
-   - city: free-text string (e.g. "Bengaluru", "Village near Pune", "Jaipur", "Small Town")
-   - locationTier: 'metro' | 'tier2' | 'small_town' | 'village' (based on the city/town)
+   - city: free-text string (e.g. "Ghaziabad", "Meerut", "Noida", "Bengaluru", "Village near Pune")
+   - locationTier: 'metro' | 'tier2' | 'small_town' | 'village' (NCR satellite cities like Ghaziabad, Noida, Gurugram, Faridabad are 'metro'; Meerut and large regional cities are 'tier2'; small towns are 'small_town'; villages are 'village')
    - priorities: array of 2 category slugs ('food_prasad', 'stage_sound', 'decor', 'performers', 'volunteers', 'safety', 'photography', 'venue_permissions')
 5. Ask ONE clear question at a time for the next missing field in order: event sub-type -> budget -> guest count -> date -> location -> priorities.
+   LOCATION HANDLING RULES:
+   - Never ask for the city name twice!
+   - If a typed city/location cannot be matched, ask ONE fallback question: "How would you describe your location?" with options:
+     (a) "Big metro, for example Delhi NCR, Mumbai, Bengaluru, Chennai, Hyderabad, Kolkata, Pune"
+     (b) "Large city, for example Jaipur, Lucknow, Indore, Nagpur, Meerut"
+     (c) "Smaller city or town"
+     (d) "Village or rural area"
+   - Accept tier answers as typed text ("metro", "large city", "small town", "village") or button clicks. Once set, never ask again.
 6. When budget and guest count are known, mention the calculated per-head budget (budget ÷ guests) and present candidate plan styles (Food-first, Look-first, Balanced, and DIY-Max if < 1200/head).
 7. When all required fields are present and priorities chosen, set isComplete to true.
 8. SANITY RULES & KINDNESS:
@@ -149,6 +157,36 @@ Output format: Strictly a JSON object:
       return this.mockFallback.generateVendorMessage(request);
     } catch (err) {
       return this.mockFallback.generateVendorMessage(request);
+    }
+  }
+
+  async resolveUnknownCityTier(cityName: string): Promise<'metro' | 'tier2' | 'small_town' | 'village' | 'unknown'> {
+    if (!this.hasKey() || !cityName) {
+      return 'unknown';
+    }
+
+    const prompt = `You are an Indian geographical cost classification agent.
+Classify the Indian city/town/location "${cityName}" into EXACTLY one of these four cost tiers:
+- "metro": Mega metro or NCR satellite (e.g. Delhi NCR, Mumbai, Bengaluru, Chennai, Hyderabad, Kolkata, Pune, Ahmedabad, Ghaziabad, Noida, Gurugram, Faridabad)
+- "tier2": Large regional city or state capital (e.g. Jaipur, Lucknow, Indore, Nagpur, Meerut, Chandigarh, Patna, Surat, Bhopal, Kochi, Coimbatore)
+- "small_town": Smaller district town or tehsil
+- "village": Rural village, gram panchayat, or rural countryside
+- "unknown": If completely unrecognized, gibberish, or fictional
+
+Respond strictly with JSON:
+{
+  "tier": "metro" | "tier2" | "small_town" | "village" | "unknown"
+}`;
+
+    try {
+      const result = await this.callGeminiWithRetry(prompt);
+      if (result && ['metro', 'tier2', 'small_town', 'village'].includes(result.tier)) {
+        return result.tier;
+      }
+      return 'unknown';
+    } catch (err) {
+      console.warn('Gemini city classification failed:', err);
+      return 'unknown';
     }
   }
 

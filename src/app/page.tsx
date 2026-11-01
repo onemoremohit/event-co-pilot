@@ -24,6 +24,7 @@ function AppContent() {
     setActiveTab,
     commitGeneratedPlan,
     applyWhatIfScenario,
+    runWhatIfScenario,
     updateTaskStatus,
     updateVendorStatus,
     updateRunSheetEntry,
@@ -67,13 +68,29 @@ function AppContent() {
   }, [draftProfile]);
 
   const handleProfileUpdate = (update: Partial<EventProfile>) => {
-    setDraftProfile(prev => ({
-      ...prev,
-      ...update,
-      totalBudget: update.totalBudget || prev.totalBudget,
-      priorities: update.priorities || prev.priorities,
-      location: update.location || prev.location
-    }));
+    setDraftProfile(prev => {
+      const next = {
+        ...prev,
+        ...update,
+        totalBudget: update.totalBudget || prev.totalBudget,
+        priorities: update.priorities || prev.priorities,
+        location: update.location || prev.location
+      };
+
+      // If plan already exists and location/tier was changed, recompute plan dynamically!
+      if (plan && update.location) {
+        const newLocTier = update.location.tier || resolveLocationTier(update.location.city).tier;
+        const res = runWhatIfScenario({
+          locationTier: newLocTier,
+          lockedCategories: []
+        });
+        if (res) {
+          applyWhatIfScenario(res, `Location changed to ${update.location.city || ''} (${newLocTier})`);
+        }
+      }
+
+      return next;
+    });
   };
 
   const handleGeneratePlan = async () => {
@@ -197,6 +214,8 @@ function AppContent() {
                   completeness={completeness}
                   onGeneratePlan={handleGeneratePlan}
                   isGenerating={isGenerating}
+                  onUpdateProfile={handleProfileUpdate}
+                  planActive={Boolean(plan)}
                 />
               </div>
             </div>

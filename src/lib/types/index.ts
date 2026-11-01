@@ -29,6 +29,8 @@ export interface Location {
   city: string;
   region?: string;
   tier?: 'metro' | 'tier2' | 'small_town' | 'village';
+  clarificationAsked?: boolean;
+  isUnknown?: boolean;
 }
 
 export interface EventProfile {

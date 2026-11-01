@@ -101,11 +101,21 @@ export function IntakeChat({
               notes: ''
             };
           }
-          if (data.profileUpdate.city) {
-            const locRes = resolveLocationTier(data.profileUpdate.city);
+          if (data.profileUpdate.city || data.profileUpdate.locationTier) {
+            const effectiveCity = data.profileUpdate.city || currentProfile?.location?.city || '';
+            const locRes = resolveLocationTier(effectiveCity);
+            const effectiveTier = data.profileUpdate.locationTier || locRes.tier;
             update.location = {
-              city: data.profileUpdate.city,
-              tier: data.profileUpdate.locationTier || locRes.tier
+              city: effectiveCity,
+              tier: effectiveTier,
+              clarificationAsked: currentProfile?.location?.clarificationAsked || Boolean(data.profileUpdate.locationTier),
+              isUnknown: data.profileUpdate.locationTier ? false : locRes.isUnknown
+            };
+          }
+          if (data.suggestedQuickReplies?.some((r: string) => r.includes('Big metro'))) {
+            update.location = {
+              ...(update.location || currentProfile?.location || { city: '', tier: 'tier2' }),
+              clarificationAsked: true
             };
           }
           onProfileUpdate(update);

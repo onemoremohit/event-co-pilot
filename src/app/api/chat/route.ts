@@ -14,7 +14,19 @@ export async function POST(req: NextRequest) {
     // If city was extracted, resolve its location tier
     if (intakeResponse.profileUpdate?.city && !intakeResponse.profileUpdate.locationTier) {
       const locRes = resolveLocationTier(intakeResponse.profileUpdate.city);
-      intakeResponse.profileUpdate.locationTier = locRes.tier;
+      if (!locRes.isUnknown) {
+        intakeResponse.profileUpdate.locationTier = locRes.tier;
+      } else if ('resolveUnknownCityTier' in provider && typeof (provider as any).resolveUnknownCityTier === 'function') {
+        // Live Gemini city resolution fallback
+        const geminiTier = await (provider as any).resolveUnknownCityTier(intakeResponse.profileUpdate.city);
+        if (geminiTier && geminiTier !== 'unknown') {
+          intakeResponse.profileUpdate.locationTier = geminiTier;
+        } else {
+          intakeResponse.profileUpdate.locationTier = 'tier2';
+        }
+      } else {
+        intakeResponse.profileUpdate.locationTier = 'tier2';
+      }
     }
 
     // Compute feasibility check if budget and guest count are present

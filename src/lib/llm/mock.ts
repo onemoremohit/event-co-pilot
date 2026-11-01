@@ -9,7 +9,7 @@ import {
 import { ChatMessage, EventProfile, BudgetPlan, BudgetCategorySlug } from '../types';
 import { PLAN_STYLES } from '../constants/cultural';
 import { extractFieldsFromText } from './parser';
-import { resolveLocationTier } from '../engine/location';
+import { resolveLocationTier, LOCATION_TIERS } from '../engine/location';
 
 export class MockLLMProvider implements LLMProvider {
   name = 'MockLLMProvider';
@@ -22,6 +22,24 @@ export class MockLLMProvider implements LLMProvider {
 
     // 2. Merge extracted fields onto current context
     const current = context.currentProfile || {};
+
+    // Location merging with clarification tracking
+    let mergedLocation = current.location;
+    if (extracted.city || extracted.locationTier) {
+      const city = extracted.city || current.location?.city || '';
+      const resolved = city ? resolveLocationTier(city) : null;
+      const tier = extracted.locationTier || (resolved && !resolved.isUnknown ? resolved.tier : (current.location?.tier || 'tier2'));
+      const isUnknown = extracted.locationTier ? false : (extracted.isLocationUnknown ?? (resolved ? resolved.isUnknown : false));
+      const clarificationAsked = current.location?.clarificationAsked || Boolean(extracted.locationTier);
+
+      mergedLocation = {
+        city: city || (extracted.locationTier ? LOCATION_TIERS[extracted.locationTier].label : ''),
+        tier,
+        isUnknown,
+        clarificationAsked
+      };
+    }
+
     const updated = {
       ...current,
       eventSubType: extracted.eventSubType ?? current.eventSubType,
@@ -35,12 +53,7 @@ export class MockLLMProvider implements LLMProvider {
       priorities: extracted.priorities && extracted.priorities.length > 0
         ? { top2: extracted.priorities as [BudgetCategorySlug, BudgetCategorySlug], notes: '' }
         : current.priorities,
-      location: extracted.city
-        ? {
-            city: extracted.city,
-            tier: extracted.locationTier ?? resolveLocationTier(extracted.city).tier
-          }
-        : current.location
+      location: mergedLocation
     };
 
     // If user's message was an explicit single-field correction
@@ -124,7 +137,34 @@ export class MockLLMProvider implements LLMProvider {
       return {
         message: 'Which city, town, or village is the event located in? (This helps us calibrate local vendor and rental cost benchmarks).',
         profileUpdate: extracted,
-        suggestedQuickReplies: ['Bengaluru (Metro)', 'Jaipur (Tier-2)', 'A Small Town', 'A Village / Rural Ground']
+        suggestedQuickReplies: [
+          'Delhi NCR / Bengaluru (Metro)',
+          'Meerut / Jaipur (Large City)',
+          'Smaller City or Town',
+          'Village or Rural Area'
+        ]
+      };
+    }
+
+    // One-time fallback if typed location could not be matched in built-in directory
+    const locRes = resolveLocationTier(updated.location.city);
+    const isUnknownCity = updated.location.isUnknown ?? locRes.isUnknown;
+    const clarificationAlreadyAsked = Boolean(current.location?.clarificationAsked);
+
+    if (isUnknownCity && !clarificationAlreadyAsked) {
+      return {
+        message: `I noted ${updated.location.city}. How would you describe your location?`,
+        profileUpdate: {
+          ...extracted,
+          city: updated.location.city,
+          locationTier: 'tier2'
+        },
+        suggestedQuickReplies: [
+          'Big metro, for example Delhi NCR, Mumbai, Bengaluru, Chennai, Hyderabad, Kolkata, Pune',
+          'Large city, for example Jaipur, Lucknow, Indore, Nagpur, Meerut',
+          'Smaller city or town',
+          'Village or rural area'
+        ]
       };
     }
 

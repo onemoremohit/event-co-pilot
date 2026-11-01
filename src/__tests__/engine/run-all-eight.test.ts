@@ -101,3 +101,4 @@ describe('Mandated 8 Evaluation Scenarios Runner', () => {
     console.log(`- "45k" Parser: ₹${extractFieldsFromText('budget is 45k').budgetAmount?.toLocaleString('en-IN')}`);
   });
 });
+

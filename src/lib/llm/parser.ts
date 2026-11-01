@@ -1,5 +1,5 @@
 import { BudgetCategorySlug, EventSubType, ExperienceTier } from '../types';
-import { resolveLocationTier, LocationTier } from '../engine/location';
+import { resolveLocationTier, detectLocationTierFromText, LOCATION_TIERS, LocationTier } from '../engine/location';
 
 export interface ExtractedFields {
   eventName?: string;
@@ -9,6 +9,7 @@ export interface ExtractedFields {
   guestCount?: number;
   city?: string;
   locationTier?: LocationTier;
+  isLocationUnknown?: boolean;
   experienceTier?: ExperienceTier;
   priorities?: BudgetCategorySlug[];
 }
@@ -239,36 +240,58 @@ export function extractFieldsFromText(text: string, baseDate = new Date()): Extr
   }
 
   // 5. Location Extraction
-  // Look for "in [City]", "at [City]", "location [City]", or known city/village words
-  const locationPrefixMatch = lower.match(/(?:in|at|location\s*(?:is|:)?)\s+([a-z0-9\s,-]+?)(?:(?:\s+(?:for|on|with|budget|guests))|$)/i);
-  let locationCandidate = locationPrefixMatch ? locationPrefixMatch[1].trim() : '';
+  // 5a. Direct tier choice (typed or clicked, e.g. "Big metro", "Large city", "Small town", "Village")
+  const detectedTier = detectLocationTierFromText(lower);
+  if (detectedTier) {
+    result.locationTier = detectedTier;
+    const tierMeta = LOCATION_TIERS[detectedTier];
+    result.city = tierMeta.label;
+    result.isLocationUnknown = false;
+  }
 
-  // Direct check for village / rural / small town in text
-  if (lower.includes('village') || lower.includes('rural') || lower.includes('gaon') || lower.includes('gram')) {
-    result.city = 'Village Community Ground';
-    result.locationTier = 'village';
-  } else if (lower.includes('small town') || lower.includes('town')) {
-    result.city = 'Town Community Center';
-    result.locationTier = 'small_town';
-  } else if (locationCandidate) {
-    // Clean up candidate
-    const cleaned = locationCandidate.split(/,|\band\b|\bwith\b/)[0].trim();
-    if (cleaned.length >= 3 && !['december', 'weeks', 'days', 'lakh', 'guests', 'festival'].includes(cleaned)) {
-      result.city = cleaned.charAt(0).toUpperCase() + cleaned.slice(1);
-      const res = resolveLocationTier(cleaned);
-      result.locationTier = res.tier;
+  // 5b. Search all cities in built-in comprehensive dictionary
+  if (!result.city) {
+    const allTiers = ['metro', 'tier2', 'small_town', 'village'] as const;
+    outerLoop: for (const t of allTiers) {
+      for (const ex of LOCATION_TIERS[t].examples) {
+        // match whole word or phrase with word boundaries
+        const regex = new RegExp(`\\b${ex.replace(/[-/\\^$*+?.()|[\]{}]/g, '\\$&')}\\b`, 'i');
+        if (regex.test(lower)) {
+          const capitalized = ex.split(' ').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ');
+          result.city = capitalized;
+          result.locationTier = t;
+          result.isLocationUnknown = false;
+          break outerLoop;
+        }
+      }
     }
-  } else {
-    // Check known city names in text
-    const knownCities = [
-      'bengaluru', 'bangalore', 'mumbai', 'delhi', 'pune', 'chennai', 'hyderabad', 'kolkata',
-      'jaipur', 'lucknow', 'indore', 'nagpur', 'coimbatore', 'chandigarh', 'ahmedabad', 'surat'
-    ];
-    for (const city of knownCities) {
-      if (lower.includes(city)) {
-        result.city = city.charAt(0).toUpperCase() + city.slice(1);
-        result.locationTier = resolveLocationTier(city).tier;
-        break;
+  }
+
+  // 5c. Match prefix pattern (e.g. "in Meerut", "at Ghaziabad", "location is Xyzpur")
+  // OR standalone short city message (e.g. "Meerut", "Ghaziabad", "Noida", "Xyzpur")
+  if (!result.city) {
+    const locationPrefixMatch = lower.match(/(?:in|at|near|location\s*(?:is|:)?)\s+([a-z0-9\s,-]+?)(?:(?:\s+(?:for|on|with|budget|guests))|$)/i);
+    let locationCandidate = locationPrefixMatch ? locationPrefixMatch[1].trim() : '';
+
+    if (!locationCandidate && !result.budgetAmount && !result.guestCount && !result.eventDate && !result.eventSubType) {
+      // Standalone user message answering "Which city are we planning in?"
+      const words = lower.replace(/[.,!?]/g, '').trim().split(/\s+/);
+      if (words.length >= 1 && words.length <= 4) {
+        const candidateRaw = words.filter(w => !['city', 'in', 'at', 'near', 'the', 'is', 'it'].includes(w)).join(' ');
+        if (candidateRaw.length >= 2 && !['yes', 'no', 'food', 'look', 'balanced', 'generate', 'plan'].includes(candidateRaw)) {
+          locationCandidate = candidateRaw;
+        }
+      }
+    }
+
+    if (locationCandidate) {
+      const cleaned = locationCandidate.split(/,|\band\b|\bwith\b/)[0].trim();
+      if (cleaned.length >= 2 && !['december', 'weeks', 'days', 'lakh', 'guests', 'festival'].includes(cleaned)) {
+        const capitalized = cleaned.charAt(0).toUpperCase() + cleaned.slice(1);
+        result.city = capitalized;
+        const res = resolveLocationTier(cleaned);
+        result.locationTier = res.isUnknown ? undefined : res.tier;
+        result.isLocationUnknown = res.isUnknown;
       }
     }
   }
