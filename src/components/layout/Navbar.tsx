@@ -1,7 +1,8 @@
 'use client';
 
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { useEvent, AppTab } from '@/context/EventContext';
+import { AiInspectorModal } from '@/components/common/AiInspectorModal';
 import {
   Sparkles,
   LayoutDashboard,
@@ -12,7 +13,8 @@ import {
   Clock,
   Play,
   RotateCcw,
-  PlusCircle
+  PlusCircle,
+  Cpu
 } from 'lucide-react';
 
 interface NavbarProps {
@@ -21,6 +23,15 @@ interface NavbarProps {
 
 export function Navbar({ onReset }: NavbarProps) {
   const { plan, activeTab, setActiveTab, startPriyaDemo, isDemoRunning, resetToNewPlan } = useEvent();
+  const [showAiModal, setShowAiModal] = useState(false);
+  const [aiStatus, setAiStatus] = useState<{ liveGeminiActive: boolean; model: string } | null>(null);
+
+  useEffect(() => {
+    fetch('/api/health')
+      .then(res => res.json())
+      .then(data => setAiStatus(data))
+      .catch(() => {});
+  }, []);
 
   const handleResetClick = async () => {
     if (confirm('Start a new blank event plan? This clears the current profile and saved plan.')) {
@@ -66,6 +77,26 @@ export function Navbar({ onReset }: NavbarProps) {
 
         {/* Action Buttons */}
         <div className="flex items-center gap-2">
+          {/* Live AI Status Pill */}
+          <button
+            onClick={() => setShowAiModal(true)}
+            className={`inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-bold border transition-all cursor-pointer shadow-2xs hover:scale-102 active:scale-95 ${
+              aiStatus?.liveGeminiActive
+                ? 'bg-emerald-50 text-emerald-900 border-emerald-300 hover:bg-emerald-100'
+                : 'bg-amber-50 text-amber-900 border-amber-300 hover:bg-amber-100'
+            }`}
+            title="Click to inspect AI Engine & Architecture details"
+          >
+            <span className={`w-2 h-2 rounded-full ${aiStatus?.liveGeminiActive ? 'bg-emerald-500 animate-pulse' : 'bg-amber-500'}`} />
+            <Cpu className="w-3 h-3 text-slate-600" />
+            <span className="hidden sm:inline">
+              {aiStatus?.liveGeminiActive ? 'Gemini 2.5 Flash' : 'Hybrid AI / Engine'}
+            </span>
+            <span className="text-[10px] bg-white/80 px-1 py-0.2 rounded border border-slate-200">
+              Inspect
+            </span>
+          </button>
+
           {/* Start New Plan / Reset Button */}
           <button
             onClick={handleResetClick}
@@ -124,6 +155,8 @@ export function Navbar({ onReset }: NavbarProps) {
           );
         })}
       </div>
+
+      <AiInspectorModal isOpen={showAiModal} onClose={() => setShowAiModal(false)} />
     </header>
   );
 }

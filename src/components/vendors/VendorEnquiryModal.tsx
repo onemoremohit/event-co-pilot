@@ -73,7 +73,13 @@ export function VendorEnquiryModal({
               <Sparkles className="w-4 h-4 text-amber-600" />
             </div>
             <div>
-              <h3 className="font-bold text-slate-900 text-sm">Vendor Outreach Generator</h3>
+              <div className="flex items-center gap-2">
+                <h3 className="font-bold text-slate-900 text-sm">Vendor Outreach Generator</h3>
+                <span className="text-[10px] font-bold text-purple-900 bg-purple-100 border border-purple-200 px-2 py-0.5 rounded-full flex items-center gap-1">
+                  <Sparkles className="w-2.5 h-2.5 text-purple-600" />
+                  <span>Google Gemini 2.5 Flash</span>
+                </span>
+              </div>
               <p className="text-[11px] text-slate-500">{item.vendorType} • {profile.eventName}</p>
             </div>
           </div>

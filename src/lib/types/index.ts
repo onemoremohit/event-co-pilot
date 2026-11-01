@@ -275,6 +275,10 @@ export interface ChatMessage {
   content: string;
   structuredData?: Record<string, unknown> | null;
   timestamp: string;
+  meta?: {
+    provider?: string;
+    extractedSummary?: string | null;
+  };
 }
 
 // ---------------------------------------------------------------------------

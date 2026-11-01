@@ -222,12 +222,23 @@ export function IntakeChat({
           setQuickReplies(data.suggestedQuickReplies);
         }
 
+        const extractedParts: string[] = [];
+        if (data.profileUpdate?.eventSubType) extractedParts.push(`Type: ${data.profileUpdate.eventSubType.replace('_', ' ')}`);
+        if (data.profileUpdate?.budgetAmount) extractedParts.push(`₹${data.profileUpdate.budgetAmount.toLocaleString('en-IN')}`);
+        if (data.profileUpdate?.guestCount) extractedParts.push(`${data.profileUpdate.guestCount} guests`);
+        if (data.profileUpdate?.city) extractedParts.push(data.profileUpdate.city);
+        if (data.profileUpdate?.eventDate) extractedParts.push(data.profileUpdate.eventDate);
+
         const botMsg: ChatMessage = {
           id: `bot-${Date.now()}`,
           eventId: currentProfile.id || 'new',
           role: 'assistant',
           content: data.message,
-          timestamp: new Date().toISOString()
+          timestamp: new Date().toISOString(),
+          meta: {
+            provider: json.provider || 'GeminiProvider',
+            extractedSummary: extractedParts.length > 0 ? extractedParts.join(' • ') : null
+          }
         };
         setMessages(prev => [...prev, botMsg]);
 
@@ -323,7 +334,22 @@ export function IntakeChat({
                   : 'bg-white text-slate-800 border border-slate-200/80 rounded-tl-none'
               }`}
             >
-              {msg.content}
+              <div>{msg.content}</div>
+
+              {/* GenAI Metadata & Dynamic Entity Extraction Badge */}
+              {msg.role === 'assistant' && msg.meta && (
+                <div className="mt-2.5 pt-2 border-t border-slate-100 flex flex-wrap items-center justify-between gap-1.5 text-[10px] text-slate-400">
+                  <span className="inline-flex items-center gap-1 font-semibold text-amber-700/90">
+                    <Sparkles className="w-2.5 h-2.5 text-amber-600 shrink-0" />
+                    <span>{msg.meta.provider === 'GeminiProvider' ? 'Google Gemini 2.5 Flash' : 'Hybrid AI Reasoning'}</span>
+                  </span>
+                  {msg.meta.extractedSummary && (
+                    <span className="font-mono text-slate-600 bg-amber-50/80 text-[9px] px-1.5 py-0.5 rounded border border-amber-200/70">
+                      ⚡ {msg.meta.extractedSummary}
+                    </span>
+                  )}
+                </div>
+              )}
             </div>
           </div>
         ))}

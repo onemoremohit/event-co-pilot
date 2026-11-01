@@ -154,6 +154,10 @@ export function BudgetBreakdown({ budget, onOpenWhatIf }: BudgetBreakdownProps) 
               <ShieldCheck className="w-3.5 h-3.5 text-emerald-700" />
               <span>{verification?.badgeText || 'Verified Invariants'}</span>
             </span>
+            <span className="text-xs bg-purple-100 text-purple-900 font-semibold px-2.5 py-0.5 rounded-full border border-purple-200 hidden sm:inline-flex items-center gap-1">
+              <Sparkles className="w-3 h-3 text-purple-700" />
+              <span>Gemini Rationale</span>
+            </span>
           </div>
           <p className="text-xs text-slate-500 mt-0.5">
             Structured allocation across all 9 cultural categories. Items with ₹0 cash are powered by community effort.
@@ -260,7 +264,14 @@ export function BudgetBreakdown({ budget, onOpenWhatIf }: BudgetBreakdownProps) 
               <th className="py-3 px-3.5 text-right">Cash Amount (₹)</th>
               <th className="py-3 px-3.5 text-right">Share (%)</th>
               <th className="py-3 px-3.5">What the Organizer Gets</th>
-              <th className="py-3 px-3.5">Rationale & &quot;Why&quot;</th>
+              <th className="py-3 px-3.5">
+                <span className="flex items-center gap-1">
+                  <span>Rationale &amp; &quot;Why&quot;</span>
+                  <span className="text-[9px] bg-purple-100 text-purple-900 border border-purple-200 px-1 py-0.2 rounded font-mono font-bold">
+                    ✨ Gemini
+                  </span>
+                </span>
+              </th>
               <th className="py-3 px-3.5 text-center w-16">Tasks</th>
             </tr>
           </thead>
