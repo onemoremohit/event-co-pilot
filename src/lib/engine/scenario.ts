@@ -29,10 +29,22 @@ function generateDiffReason(
   oldProfile: EventProfile,
   isLocked: boolean,
   oldMode?: string,
-  newMode?: string
+  newMode?: string,
+  oldAmount?: number,
+  newAmount?: number
 ): string {
+  if (oldAmount === 0 && (newAmount ?? 0) > 0) {
+    return `Upgraded from Community Sourced (₹0) to paid expense (₹${(newAmount ?? 0).toLocaleString('en-IN')}); other categories rebalanced.`;
+  }
+
+  if ((oldAmount ?? 0) > 0 && newAmount === 0) {
+    return `Reverted from paid allocation (₹${(oldAmount ?? 0).toLocaleString('en-IN')}) back to Community Sourced (₹0 cash spend); cash redistributed.`;
+  }
+
   if (isLocked) {
-    return 'Category is locked by organizer; exact cash amount strictly preserved across rebalancing.';
+    return delta !== 0
+      ? `Category locked at ₹${(newAmount ?? 0).toLocaleString('en-IN')} by organizer; cash amount preserved across rebalancing.`
+      : 'Category is locked by organizer; exact cash amount strictly preserved across rebalancing.';
   }
 
   const reasons: string[] = [];
@@ -121,13 +133,32 @@ export function recomputeScenario(
 
   // 2. Build category lock map
   const locks: CategoryLockMap = {};
-  const lockedSlugs = inputChanges.lockedCategories || [];
+  const lockedSlugs = [...(inputChanges.lockedCategories || [])];
   lockedSlugs.forEach(slug => {
     const existing = currentPlan.categories.find(c => c.slug === slug);
     if (existing) {
-      locks[slug] = existing.allocatedAmount;
+      locks[slug] = existing.lockedAmount ?? existing.allocatedAmount;
     }
   });
+
+  // Apply explicit category overrides (e.g. adding cash expense or resetting to 0)
+  if (inputChanges.categoryOverrides) {
+    Object.entries(inputChanges.categoryOverrides).forEach(([s, amt]) => {
+      const slug = s as BudgetCategorySlug;
+      if (amt !== undefined && amt !== null) {
+        if (amt === 0) {
+          delete locks[slug];
+          const idx = lockedSlugs.indexOf(slug);
+          if (idx >= 0) lockedSlugs.splice(idx, 1);
+        } else {
+          locks[slug] = Math.max(0, Math.round(amt));
+          if (!lockedSlugs.includes(slug)) {
+            lockedSlugs.push(slug);
+          }
+        }
+      }
+    });
+  }
 
   // 3. Re-run deterministic allocation and backward scheduling with location tier
   const newPlan = allocateBudget(updatedProfile, {
@@ -156,7 +187,7 @@ export function recomputeScenario(
     if (delta > 0) direction = 'increase';
     if (delta < 0) direction = 'decrease';
 
-    const isLocked = lockedSlugs.includes(newCat.slug);
+    const isLocked = lockedSlugs.includes(newCat.slug) || newCat.isLocked;
 
     if (delta !== 0 || isLocked) {
       const severity: Diff['severity'] = Math.abs(deltaPct) > 25 ? 'warning' : 'info';
@@ -175,7 +206,9 @@ export function recomputeScenario(
           profile,
           isLocked,
           oldCat.sourcingModeLabel,
-          newCat.sourcingModeLabel
+          newCat.sourcingModeLabel,
+          oldCat.allocatedAmount,
+          newCat.allocatedAmount
         ),
         severity
       });

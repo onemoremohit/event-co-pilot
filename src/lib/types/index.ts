@@ -248,6 +248,7 @@ export interface ScenarioInput {
   eventDate?: string | null;
   locationTier?: 'metro' | 'tier2' | 'small_town' | 'village' | null;
   lockedCategories: BudgetCategorySlug[];
+  categoryOverrides?: Partial<Record<BudgetCategorySlug, number>>;
 }
 
 export interface Scenario {

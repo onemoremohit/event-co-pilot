@@ -242,13 +242,42 @@ export function allocateBudget(profile: EventProfile, options: AllocationOptions
       const lockVal = Math.max(0, Math.round(locks[slug]!));
       currentAllocations[slug] = lockVal;
       committedCash += lockVal;
+    }
+  }
 
-      // Determine appropriate mode label corresponding to locked amount
-      for (const m of SOURCING_MODE_ORDER) {
-        const cost = computeSourcingModeCost(slug, m, guests, locTier);
-        if (lockVal >= cost) {
-          currentModes[slug] = m;
+  // Invariant Guard: If user locks exceed allocatable budget, scale locks down proportionally
+  // so sum of locks matches allocatableBudget without producing negative allocations.
+  if (committedCash > allocatableBudget && allocatableBudget > 0) {
+    const scale = allocatableBudget / committedCash;
+    let distributed = 0;
+    const lockedSlugs = slugs.filter(s => locks[s] !== undefined && locks[s] !== null);
+    lockedSlugs.forEach((slug, idx) => {
+      if (idx === lockedSlugs.length - 1) {
+        currentAllocations[slug] = Math.max(0, allocatableBudget - distributed);
+      } else {
+        const scaled = Math.floor(currentAllocations[slug] * scale);
+        currentAllocations[slug] = scaled;
+        distributed += scaled;
+      }
+    });
+    committedCash = allocatableBudget;
+  }
+
+  // Determine appropriate mode label corresponding to locked amount
+  for (const slug of slugs) {
+    if (locks[slug] !== undefined && locks[slug] !== null) {
+      const lockVal = currentAllocations[slug];
+      if (lockVal > 0) {
+        currentModes[slug] = 'minimal_paid'; // baseline if cash is spent
+        for (const m of SOURCING_MODE_ORDER) {
+          if (m === 'community_sourced') continue;
+          const cost = computeSourcingModeCost(slug, m, guests, locTier);
+          if (lockVal >= cost) {
+            currentModes[slug] = m;
+          }
         }
+      } else {
+        currentModes[slug] = 'community_sourced';
       }
     }
   }

@@ -5,6 +5,7 @@ import {
   EventPlan,
   EventProfile,
   BudgetPlan,
+  BudgetCategorySlug,
   TaskGraph,
   VendorChecklistItem,
   RunSheetEntry,
@@ -30,6 +31,8 @@ interface EventContextType {
   commitGeneratedPlan: (fullPlan: EventPlan) => Promise<void>;
   runWhatIfScenario: (inputChanges: ScenarioInput) => ScenarioResult | null;
   applyWhatIfScenario: (result: ScenarioResult, label: string) => Promise<void>;
+  addCategoryExpense: (slug: BudgetCategorySlug, amount: number, expandTotalBudget?: boolean) => Promise<void>;
+  removeCategoryExpense: (slug: BudgetCategorySlug) => Promise<void>;
   updateTaskStatus: (taskId: string, status: TaskStatus) => Promise<void>;
   updateVendorStatus: (vendorId: string, status: VendorStatus, quotedPrice?: number) => Promise<void>;
   updateRunSheetEntry: (id: string, patch: Partial<RunSheetEntry>) => Promise<void>;
@@ -120,6 +123,13 @@ export function EventProvider({ children }: { children: ReactNode }) {
 
     const updatedPlan: EventPlan = {
       ...plan,
+      profile: {
+        ...plan.profile,
+        totalBudget: {
+          ...plan.profile.totalBudget,
+          amount: result.newPlan.totalBudget
+        }
+      },
       budget: result.newPlan,
       tasks: result.newTasks,
       vendors: result.newVendors,
@@ -129,6 +139,65 @@ export function EventProvider({ children }: { children: ReactNode }) {
 
     setPlan(updatedPlan);
     setActiveTab('dashboard');
+  };
+
+  const addCategoryExpense = async (
+    slug: BudgetCategorySlug,
+    amount: number,
+    expandTotalBudget: boolean = false
+  ) => {
+    if (!plan) return;
+    const currentTotal = plan.budget.totalBudget;
+    const addedAmount = Math.max(0, Math.round(amount));
+    const newTotal = expandTotalBudget ? currentTotal + addedAmount : currentTotal;
+
+    const existingLocks: Partial<Record<BudgetCategorySlug, number>> = {};
+    plan.budget.categories.forEach(c => {
+      if (c.isLocked && c.slug !== slug && c.lockedAmount !== null) {
+        existingLocks[c.slug] = c.lockedAmount;
+      }
+    });
+    existingLocks[slug] = addedAmount;
+
+    const inputChanges: ScenarioInput = {
+      budget: newTotal,
+      guestCount: plan.profile.guestCount,
+      eventDate: plan.profile.eventDate,
+      locationTier: plan.profile.location?.tier,
+      lockedCategories: Object.keys(existingLocks) as BudgetCategorySlug[],
+      categoryOverrides: existingLocks
+    };
+
+    const scenario = recomputeScenario(plan.budget, plan.tasks, plan.profile, inputChanges);
+    const catLabel = plan.budget.categories.find(c => c.slug === slug)?.label || slug;
+    const label = expandTotalBudget
+      ? `Added ₹${addedAmount.toLocaleString('en-IN')} for ${catLabel} (+₹${addedAmount.toLocaleString('en-IN')} budget)`
+      : `Added ₹${addedAmount.toLocaleString('en-IN')} for ${catLabel} (Rebalanced)`;
+
+    await applyWhatIfScenario(scenario, label);
+  };
+
+  const removeCategoryExpense = async (slug: BudgetCategorySlug) => {
+    if (!plan) return;
+    const existingLocks: Partial<Record<BudgetCategorySlug, number>> = {};
+    plan.budget.categories.forEach(c => {
+      if (c.isLocked && c.slug !== slug && c.lockedAmount !== null) {
+        existingLocks[c.slug] = c.lockedAmount;
+      }
+    });
+
+    const inputChanges: ScenarioInput = {
+      budget: plan.budget.totalBudget,
+      guestCount: plan.profile.guestCount,
+      eventDate: plan.profile.eventDate,
+      locationTier: plan.profile.location?.tier,
+      lockedCategories: Object.keys(existingLocks) as BudgetCategorySlug[],
+      categoryOverrides: { [slug]: 0 }
+    };
+
+    const scenario = recomputeScenario(plan.budget, plan.tasks, plan.profile, inputChanges);
+    const catLabel = plan.budget.categories.find(c => c.slug === slug)?.label || slug;
+    await applyWhatIfScenario(scenario, `Reverted ${catLabel} to Community Sourcing (₹0)`);
   };
 
   const updateTaskStatus = async (taskId: string, status: TaskStatus) => {
@@ -264,6 +333,8 @@ export function EventProvider({ children }: { children: ReactNode }) {
         commitGeneratedPlan,
         runWhatIfScenario,
         applyWhatIfScenario,
+        addCategoryExpense,
+        removeCategoryExpense,
         updateTaskStatus,
         updateVendorStatus,
         updateRunSheetEntry,
