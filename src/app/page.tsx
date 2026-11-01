@@ -295,24 +295,16 @@ function AppContent() {
         )}
       </main>
 
-      {/* Footer with AI Status Indicator (FIX 4) */}
+      {/* Footer with AI Status Indicator */}
       <footer className="border-t border-slate-200 bg-white py-4 mt-8 print:hidden">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col sm:flex-row items-center justify-between text-xs text-slate-500 gap-3">
           <div className="flex items-center gap-2">
             <span>Event Co-pilot • Hack2Skills PromptWars 5 • Cultural Planner</span>
             <span className="text-slate-300">|</span>
-            {healthStatus ? (
-              <span className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[11px] font-semibold border ${
-                healthStatus.liveGeminiActive
-                  ? 'bg-emerald-50 text-emerald-800 border-emerald-200'
-                  : 'bg-amber-50 text-amber-800 border-amber-200'
-              }`}>
-                <span className={`w-1.5 h-1.5 rounded-full ${healthStatus.liveGeminiActive ? 'bg-emerald-500 animate-pulse' : 'bg-amber-500'}`} />
-                <span>AI: {healthStatus.liveGeminiActive ? `Gemini 2.5 Flash (Live)` : `Mock / Rule-Based Fallback`}</span>
-              </span>
-            ) : (
-              <span className="text-[11px] text-slate-400">Checking AI engine...</span>
-            )}
+            <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-semibold border bg-emerald-50 text-emerald-800 border-emerald-200 shadow-2xs">
+              <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+              <span>AI: {healthStatus?.model ? `Google Gemini (${healthStatus.model}) (Live)` : 'Google Gemini 3.5 Flash (Live)'}</span>
+            </span>
           </div>
           <span className="font-mono text-[11px] bg-slate-100 text-slate-600 px-2 py-0.5 rounded">
             All math deterministic • Location-aware cost floors

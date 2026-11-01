@@ -47,7 +47,8 @@ export async function POST(req: NextRequest) {
       success: true,
       data: intakeResponse,
       feasibility,
-      provider: provider.name
+      provider: provider.name,
+      model: (provider as any).modelName || 'gemini-3.5-flash'
     });
   } catch (err: any) {
     console.error('API /api/chat error:', err);

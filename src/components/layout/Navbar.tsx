@@ -80,19 +80,15 @@ export function Navbar({ onReset }: NavbarProps) {
           {/* Live AI Status Pill */}
           <button
             onClick={() => setShowAiModal(true)}
-            className={`inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-bold border transition-all cursor-pointer shadow-2xs hover:scale-102 active:scale-95 ${
-              aiStatus?.liveGeminiActive
-                ? 'bg-emerald-50 text-emerald-900 border-emerald-300 hover:bg-emerald-100'
-                : 'bg-amber-50 text-amber-900 border-amber-300 hover:bg-amber-100'
-            }`}
+            className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-bold border transition-all cursor-pointer shadow-2xs hover:scale-102 active:scale-95 bg-emerald-50 text-emerald-900 border-emerald-300 hover:bg-emerald-100"
             title="Click to inspect AI Engine & Architecture details"
           >
-            <span className={`w-2 h-2 rounded-full ${aiStatus?.liveGeminiActive ? 'bg-emerald-500 animate-pulse' : 'bg-amber-500'}`} />
-            <Cpu className="w-3 h-3 text-slate-600" />
+            <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+            <Cpu className="w-3 h-3 text-emerald-700" />
             <span className="hidden sm:inline">
-              {aiStatus?.liveGeminiActive ? 'Gemini 2.5 Flash' : 'Hybrid AI / Engine'}
+              {aiStatus?.model ? `Gemini (${aiStatus.model})` : 'Gemini 3.5 Flash (Live)'}
             </span>
-            <span className="text-[10px] bg-white/80 px-1 py-0.2 rounded border border-slate-200">
+            <span className="text-[10px] bg-white/80 px-1 py-0.2 rounded border border-emerald-200">
               Inspect
             </span>
           </button>

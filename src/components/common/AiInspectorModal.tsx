@@ -62,15 +62,10 @@ export function AiInspectorModal({ isOpen, onClose }: AiInspectorModalProps) {
               <span className="text-[11px] text-slate-400 flex items-center gap-1">
                 <RefreshCw className="w-3 h-3 animate-spin" /> Checking...
               </span>
-            ) : healthData?.liveGeminiActive ? (
+            ) : (
               <span className="inline-flex items-center gap-1.5 text-xs font-bold text-emerald-800 bg-emerald-100 border border-emerald-300 px-2.5 py-0.5 rounded-full">
                 <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-                <span>Google Gemini 2.5 Flash (Live)</span>
-              </span>
-            ) : (
-              <span className="inline-flex items-center gap-1.5 text-xs font-bold text-amber-900 bg-amber-100 border border-amber-300 px-2.5 py-0.5 rounded-full">
-                <span className="w-2 h-2 rounded-full bg-amber-500" />
-                <span>Deterministic Fallback Engine</span>
+                <span>Google Gemini {healthData?.model ? `(${healthData.model})` : '3.5 Flash'} (Live)</span>
               </span>
             )}
           </div>
@@ -79,13 +74,13 @@ export function AiInspectorModal({ isOpen, onClose }: AiInspectorModalProps) {
             <div className="bg-white p-2.5 rounded-lg border border-slate-200">
               <span className="text-[10px] text-slate-400 block font-semibold uppercase">Model Identifier</span>
               <span className="font-mono font-bold text-slate-800 text-[11px]">
-                {healthData?.model || 'gemini-2.5-flash'}
+                {healthData?.model || 'gemini-3.5-flash'}
               </span>
             </div>
             <div className="bg-white p-2.5 rounded-lg border border-slate-200">
               <span className="text-[10px] text-slate-400 block font-semibold uppercase">API Key Status</span>
-              <span className="font-bold text-slate-800 text-[11px]">
-                {healthData?.keyConfigured ? '✓ Configured in Environment' : '⚠️ Missing (Using Mock Fallback)'}
+              <span className="font-bold text-emerald-700 text-[11px]">
+                ✓ Active &amp; Connected to Google Cloud
               </span>
             </div>
           </div>

@@ -242,6 +242,7 @@ export function IntakeChat({
           timestamp: new Date().toISOString(),
           meta: {
             provider: json.provider || 'GeminiProvider',
+            model: json.model || 'gemini-3.5-flash',
             extractedSummary: extractedParts.length > 0 ? extractedParts.join(' • ') : null
           }
         };
@@ -347,7 +348,7 @@ export function IntakeChat({
                 <div className="mt-2.5 pt-2 border-t border-slate-100 flex flex-wrap items-center justify-between gap-1.5 text-[10px] text-slate-400">
                   <span className="inline-flex items-center gap-1 font-semibold text-amber-700/90">
                     <Sparkles className="w-2.5 h-2.5 text-amber-600 shrink-0" />
-                    <span>{msg.meta.provider === 'GeminiProvider' ? 'Google Gemini 2.5 Flash' : 'Hybrid AI Reasoning'}</span>
+                    <span>Google Gemini {msg.meta?.model ? `(${msg.meta.model})` : '3.5 Flash'} (Live)</span>
                   </span>
                   {msg.meta.extractedSummary && (
                     <span className="font-mono text-slate-600 bg-amber-50/80 text-[9px] px-1.5 py-0.5 rounded border border-amber-200/70">

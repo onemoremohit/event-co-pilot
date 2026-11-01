@@ -277,6 +277,7 @@ export interface ChatMessage {
   timestamp: string;
   meta?: {
     provider?: string;
+    model?: string;
     extractedSummary?: string | null;
   };
 }

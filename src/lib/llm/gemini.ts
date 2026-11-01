@@ -14,7 +14,8 @@ import { ChatMessage, EventProfile, BudgetPlan } from '../types';
 
 export class GeminiProvider implements LLMProvider {
   name = 'GeminiProvider';
-  public readonly modelName = 'gemini-2.5-flash';
+  public modelName = 'gemini-3.5-flash';
+  private candidateModels = ['gemini-3.5-flash', 'gemini-3.1-flash-lite', 'gemini-2.5-flash'];
   private apiKey: string;
   private mockFallback: MockLLMProvider;
 
@@ -198,35 +199,49 @@ Respond strictly with JSON:
   }
 
   private async callGeminiWithRetry(prompt: string): Promise<any> {
-    const url = `https://generativelanguage.googleapis.com/v1beta/models/${this.modelName}:generateContent?key=${this.apiKey}`;
+    let lastError: any = null;
 
-    const response = await fetch(url, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        contents: [
-          {
-            parts: [{ text: prompt }]
-          }
-        ],
-        generationConfig: {
-          responseMimeType: 'application/json',
-          temperature: 0.2
+    for (const model of this.candidateModels) {
+      try {
+        const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${this.apiKey}`;
+        const response = await fetch(url, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            contents: [
+              {
+                parts: [{ text: prompt }]
+              }
+            ],
+            generationConfig: {
+              responseMimeType: 'application/json',
+              temperature: 0.2
+            }
+          }),
+          signal: AbortSignal.timeout(10000)
+        });
+
+        if (!response.ok) {
+          lastError = new Error(`Model ${model} returned status ${response.status}: ${response.statusText}`);
+          continue;
         }
-      }),
-      signal: AbortSignal.timeout(10000) // 10 second timeout
-    });
 
-    if (!response.ok) {
-      throw new Error(`Gemini API returned status ${response.status}: ${response.statusText}`);
+        const data = await response.json();
+        const candidateText = data.candidates?.[0]?.content?.parts?.[0]?.text;
+        if (!candidateText) {
+          lastError = new Error(`No candidate text from model ${model}`);
+          continue;
+        }
+
+        // Successfully received answer from model
+        this.modelName = model;
+        return JSON.parse(candidateText);
+      } catch (err: any) {
+        lastError = err;
+        continue;
+      }
     }
 
-    const data = await response.json();
-    const candidateText = data.candidates?.[0]?.content?.parts?.[0]?.text;
-    if (!candidateText) {
-      throw new Error('No candidate content returned by Gemini');
-    }
-
-    return JSON.parse(candidateText);
+    throw lastError || new Error('All Gemini candidate models failed');
   }
 }
