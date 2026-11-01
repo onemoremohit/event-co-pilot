@@ -1,5 +1,10 @@
 import { Task, TaskGraph, EventProfile, BudgetCategorySlug } from '../types';
-import { CULTURAL_TASK_TEMPLATES, TaskTemplate } from '../constants/cultural';
+import {
+  CULTURAL_TASK_TEMPLATES,
+  TaskTemplate,
+  detectEventArchetype,
+  getCulturalTaskTemplates
+} from '../constants/cultural';
 
 export interface TimelineOptions {
   customTemplates?: TaskTemplate[];
@@ -49,7 +54,8 @@ export function scheduleBackward(profile: EventProfile, options: TimelineOptions
   const startDate = parseDate(profile.planningStartDate || formatDate(new Date()));
   const daysAvailable = Math.max(0, differenceInDays(eventDate, startDate));
 
-  const templates = options.customTemplates || CULTURAL_TASK_TEMPLATES;
+  const archetype = detectEventArchetype(profile);
+  const templates = options.customTemplates || getCulturalTaskTemplates(archetype);
   const maxLeadTime = Math.max(...templates.map(t => t.leadTimeDays), 30);
   const rushMode = daysAvailable < maxLeadTime;
 

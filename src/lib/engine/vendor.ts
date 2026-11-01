@@ -1,5 +1,10 @@
 import { VendorChecklistItem, EventProfile, BudgetPlan, TaskGraph } from '../types';
-import { CULTURAL_VENDOR_TEMPLATES, VendorTemplate } from '../constants/cultural';
+import {
+  CULTURAL_VENDOR_TEMPLATES,
+  VendorTemplate,
+  detectEventArchetype,
+  getCulturalVendorTemplates
+} from '../constants/cultural';
 
 export interface VendorOptions {
   customTemplates?: VendorTemplate[];
@@ -15,7 +20,8 @@ export function generateVendorChecklist(
   taskGraph: TaskGraph,
   options: VendorOptions = {}
 ): VendorChecklistItem[] {
-  const templates = options.customTemplates || CULTURAL_VENDOR_TEMPLATES;
+  const archetype = detectEventArchetype(profile);
+  const templates = options.customTemplates || getCulturalVendorTemplates(archetype);
   const categoryBudgetMap = new Map(budgetPlan.categories.map(c => [c.slug, c.allocatedAmount]));
 
   // Create a map from category to earliest task deadline for that category

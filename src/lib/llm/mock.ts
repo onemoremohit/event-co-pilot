@@ -7,7 +7,7 @@ import {
   VendorMessageResponse
 } from './provider';
 import { ChatMessage, EventProfile, BudgetPlan, BudgetCategorySlug } from '../types';
-import { PLAN_STYLES } from '../constants/cultural';
+import { PLAN_STYLES, detectEventArchetype, getCandidatePlanStyles } from '../constants/cultural';
 import { extractFieldsFromText } from './parser';
 import { resolveLocationTier, LOCATION_TIERS } from '../engine/location';
 
@@ -168,9 +168,10 @@ export class MockLLMProvider implements LLMProvider {
       };
     }
 
-    // 4. All required fields are present! Offer Candidate Plan Styles if not chosen yet
+    // 4. All required fields are present! Offer Candidate Plan Styles matching event archetype
+    const archetype = detectEventArchetype(updated);
     const perHead = Math.round(updated.totalBudget.amount / updated.guestCount);
-    const candidateStyles = PLAN_STYLES.filter(s => !s.perHeadThreshold || perHead <= s.perHeadThreshold);
+    const candidateStyles = getCandidatePlanStyles(archetype).filter(s => !s.perHeadThreshold || perHead <= s.perHeadThreshold);
 
     if (!updated.priorities?.top2 || updated.priorities.top2.length === 0) {
       const locRes = resolveLocationTier(updated.location.city);
@@ -184,11 +185,7 @@ export class MockLLMProvider implements LLMProvider {
         message,
         profileUpdate: extracted,
         candidatePlans: candidateStyles,
-        suggestedQuickReplies: [
-          'Food & Prasad First',
-          'Look & Spectacle First',
-          'Balanced Community Harmony'
-        ]
+        suggestedQuickReplies: candidateStyles.map(s => s.name).slice(0, 3)
       };
     }
 

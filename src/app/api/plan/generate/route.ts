@@ -3,6 +3,7 @@ import { EventProfile, EventPlan, RunSheetEntry } from '@/lib/types';
 import { allocateBudget } from '@/lib/engine/budget';
 import { scheduleBackward } from '@/lib/engine/timeline';
 import { generateVendorChecklist } from '@/lib/engine/vendor';
+import { detectEventArchetype } from '@/lib/constants/cultural';
 import { getLLMProvider } from '@/lib/llm';
 
 export async function POST(req: NextRequest) {
@@ -14,15 +15,23 @@ export async function POST(req: NextRequest) {
     const tasks = scheduleBackward(profile);
     const vendors = generateVendorChecklist(profile, budget, tasks);
 
-    // 2. Generate initial Day-of run sheet from day-of tasks (leadTimeDays === 0 or <= 1)
+    // 2. Generate initial Day-of run sheet matching the specific event archetype
+    const archetype = detectEventArchetype(profile);
+    const isDandiya = archetype === 'dandiya_garba';
+    const isCultural = archetype === 'cultural_night';
+
     const runSheet: RunSheetEntry[] = [
       {
         id: 'rs-1',
         eventId: profile.id,
         time: '14:00',
-        activity: 'Stage, Truss & Power Generator Setup',
+        activity: isDandiya
+          ? 'Dance Lawn Platform, Truss & Generator Setup'
+          : 'Stage, Truss & Power Generator Setup',
         responsible: 'Stage Vendor + Electrical Volunteer',
-        notes: 'Inspect main stage platform stability and ground cables safely.',
+        notes: isDandiya
+          ? 'Inspect lawn dance floor safety, ground levelness, and cable covers.'
+          : 'Inspect main stage platform stability and ground cables safely.',
         isUserEdited: false,
         status: 'pending',
         sourceTaskId: null
@@ -31,9 +40,13 @@ export async function POST(req: NextRequest) {
         id: 'rs-2',
         eventId: profile.id,
         time: '15:30',
-        activity: 'Sound System Acoustic Sound Check',
+        activity: isDandiya
+          ? 'High-Bass Sound System & DJ Acoustic Check'
+          : 'Sound System Acoustic Sound Check',
         responsible: 'Sound Vendor + Cultural Lead',
-        notes: 'Check all cordless microphones and audio balance.',
+        notes: isDandiya
+          ? 'Test heavy-bass audio coverage across open dance circle and wireless mics.'
+          : 'Check all cordless microphones and audio balance.',
         isUserEdited: false,
         status: 'pending',
         sourceTaskId: null
@@ -42,9 +55,13 @@ export async function POST(req: NextRequest) {
         id: 'rs-3',
         eventId: profile.id,
         time: '16:30',
-        activity: 'Floral Entrance & Rangoli Decor Completion',
+        activity: isDandiya
+          ? 'Ethnic Pandal Decor, Fairy Light Canopy & Selfie Booth Ready'
+          : 'Floral Entrance & Rangoli Decor Completion',
         responsible: 'Decor Vendor + Welcome Volunteer Team',
-        notes: 'Light traditional brass lamps and prepare deity altar.',
+        notes: isDandiya
+          ? 'Inspect vibrant canopy, photo booth props, and pathway fairy lights.'
+          : 'Light traditional brass lamps and prepare deity altar.',
         isUserEdited: false,
         status: 'pending',
         sourceTaskId: null
@@ -64,9 +81,15 @@ export async function POST(req: NextRequest) {
         id: 'rs-5',
         eventId: profile.id,
         time: '18:00',
-        activity: 'Resident Arrival, Welcome Tilak & Consecrated Prasad Distribution',
+        activity: isDandiya
+          ? 'Resident Arrival, Wristband Check-in & Dandiya Sticks Distribution'
+          : isCultural
+          ? 'Guest Arrival, Auditorium Seating & Welcome Drinks'
+          : 'Resident Arrival, Welcome Tilak & Consecrated Prasad Distribution',
         responsible: 'Hospitality Committee',
-        notes: 'Elderly seating assistance near stage.',
+        notes: isDandiya
+          ? 'Hand out wooden Dandiya sticks, check entry tokens, and guide dancers to lawn.'
+          : 'Elderly seating assistance near stage.',
         isUserEdited: false,
         status: 'pending',
         sourceTaskId: null
@@ -75,9 +98,13 @@ export async function POST(req: NextRequest) {
         id: 'rs-6',
         eventId: profile.id,
         time: '18:45',
-        activity: 'Cultural Performances & Live Folk Music Troupe',
-        responsible: 'Emcee & Artists',
-        notes: 'Society kids performance followed by main folk troupe.',
+        activity: isDandiya
+          ? 'Opening Traditional Aarti & Live Dhol High-Energy Garba Rounds'
+          : 'Cultural Performances & Live Folk Music Troupe',
+        responsible: isDandiya ? 'Dhol Troupe, Singer & Emcee' : 'Emcee & Artists',
+        notes: isDandiya
+          ? 'Traditional 2-clapping garba circles progressing into high-tempo live dhol beats.'
+          : 'Society kids performance followed by main folk troupe.',
         isUserEdited: false,
         status: 'pending',
         sourceTaskId: null
@@ -86,7 +113,9 @@ export async function POST(req: NextRequest) {
         id: 'rs-7',
         eventId: profile.id,
         time: '20:15',
-        activity: 'Grand Community Festive Dinner Buffet Opens',
+        activity: isDandiya
+          ? 'Dinner Buffet & Festive Snack Counters Open'
+          : 'Grand Community Festive Dinner Buffet Opens',
         responsible: 'Caterer & Food Volunteers',
         notes: 'Manage 2 simultaneous buffet lines for 200+ guests.',
         isUserEdited: false,
@@ -97,7 +126,9 @@ export async function POST(req: NextRequest) {
         id: 'rs-8',
         eventId: profile.id,
         time: '22:00',
-        activity: 'Event Conclusion, Eco-friendly Cleanup & Vendor Teardown',
+        activity: isDandiya
+          ? 'Best Attire & Dancer Awards, Sanedo Finale & Teardown'
+          : 'Event Conclusion, Eco-friendly Cleanup & Vendor Teardown',
         responsible: 'Youth Volunteer Brigade',
         notes: 'Loudspeaker shut-off strictly adhering to municipal 10 PM rule.',
         isUserEdited: false,

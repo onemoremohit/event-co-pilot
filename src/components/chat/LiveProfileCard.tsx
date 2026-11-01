@@ -2,7 +2,7 @@
 
 import React, { useState } from 'react';
 import { EventProfile, BudgetCategorySlug } from '@/lib/types';
-import { CULTURAL_CATEGORIES } from '@/lib/constants/cultural';
+import { CULTURAL_CATEGORIES, detectEventArchetype, getCategoryMetadata } from '@/lib/constants/cultural';
 import { resolveLocationTier, LOCATION_TIERS, LocationTier } from '@/lib/engine/location';
 import { Calendar, Users, IndianRupee, MapPin, Sparkles, Building2, CheckCircle2, Edit3, Check } from 'lucide-react';
 
@@ -298,15 +298,19 @@ export function LiveProfileCard({
           </span>
           <div className="flex flex-wrap gap-1.5">
             {profile.priorities?.top2 && profile.priorities.top2.length > 0 ? (
-              profile.priorities.top2.map(slug => (
-                <span
-                  key={slug}
-                  className="inline-flex items-center gap-1 text-xs font-semibold bg-orange-100 text-orange-800 px-2.5 py-1 rounded-lg border border-orange-200"
-                >
-                  <span>{CULTURAL_CATEGORIES[slug as BudgetCategorySlug]?.icon || '⭐'}</span>
-                  <span>{CULTURAL_CATEGORIES[slug as BudgetCategorySlug]?.shortLabel || slug}</span>
-                </span>
-              ))
+              profile.priorities.top2.map(slug => {
+                const archetype = detectEventArchetype(profile);
+                const meta = getCategoryMetadata(slug as BudgetCategorySlug, archetype);
+                return (
+                  <span
+                    key={slug}
+                    className="inline-flex items-center gap-1 text-xs font-semibold bg-orange-100 text-orange-800 px-2.5 py-1 rounded-lg border border-orange-200"
+                  >
+                    <span>{meta?.icon || '⭐'}</span>
+                    <span>{meta?.shortLabel || slug}</span>
+                  </span>
+                );
+              })
             ) : (
               <span className="text-xs text-slate-400 italic">Not chosen yet (can be confirmed during chat)</span>
             )}

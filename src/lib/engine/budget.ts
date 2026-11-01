@@ -12,7 +12,9 @@ import {
   CULTURAL_CATEGORIES,
   CULTURAL_WEIGHT_TABLE,
   FLOOR_FIXED,
-  FLOOR_PER_HEAD
+  FLOOR_PER_HEAD,
+  detectEventArchetype,
+  getCategoryMetadata
 } from '../constants/cultural';
 import {
   resolveLocationTier,
@@ -23,7 +25,8 @@ import {
 import {
   CATEGORY_SOURCING_CONFIG,
   SOURCING_MODE_ORDER,
-  computeSourcingModeCost
+  computeSourcingModeCost,
+  getCategorySourcingDetails
 } from './sourcing';
 import { evaluateInputSanity } from './sanity';
 
@@ -406,18 +409,19 @@ export function allocateBudget(profile: EventProfile, options: AllocationOptions
   }
 
   // 9. Construct Structured Categories
+  const archetype = detectEventArchetype(profile);
   const categories: BudgetCategory[] = slugs.map(slug => {
     const allocated = currentAllocations[slug];
     const mode = currentModes[slug];
-    const config = CATEGORY_SOURCING_CONFIG[slug];
-    const modeDef = config.modes[mode];
+    const catMeta = getCategoryMetadata(slug, archetype);
+    const sourcingDetails = getCategorySourcingDetails(slug, mode, archetype);
     const isLocked = locks[slug] !== undefined && locks[slug] !== null;
     const isPriority = topPriorities.includes(slug);
     const perHead = guests > 0 ? Math.round(allocated / guests) : 0;
     const minPaidFloor = computeSourcingModeCost(slug, 'minimal_paid', guests, locTier);
 
-    // Generate dynamic sub-items
-    const subItems = CULTURAL_CATEGORIES[slug].defaultSubItems.map(item => ({
+    // Generate dynamic sub-items matching event archetype
+    const subItems = catMeta.defaultSubItems.map(item => ({
       label: item.label,
       estimatedCost: Math.round(allocated * item.ratio),
       notes: allocated === 0 ? 'Covered by community contribution / volunteer loan' : item.notes
@@ -430,14 +434,14 @@ export function allocateBudget(profile: EventProfile, options: AllocationOptions
     } else if (mode === 'community_sourced') {
       why = `Powered 100% by community volunteers & in-kind contributions (₹0 cash spend).`;
     } else if (isPriority) {
-      why = `Top priority selection: Upgraded to ${modeDef.label} to ensure a standout experience for ${guests} guests.`;
+      why = `Top priority selection: Upgraded to ${sourcingDetails.label} to ensure a standout experience for ${guests} guests.`;
     } else {
-      why = `Balanced at ${modeDef.label} suited for community gathering standards.`;
+      why = `Balanced at ${sourcingDetails.label} suited for community gathering standards.`;
     }
 
     return {
       slug,
-      label: config.label,
+      label: catMeta.label,
       allocatedAmount: allocated,
       allocatedPercentage:
         allocatableBudget > 0 ? Number(((allocated / allocatableBudget) * 100).toFixed(2)) : 0,
@@ -449,10 +453,10 @@ export function allocateBudget(profile: EventProfile, options: AllocationOptions
       why,
       subItems,
       sourcingMode: mode,
-      sourcingModeLabel: modeDef.label,
-      deliverablesDescription: modeDef.deliverables,
-      communityTasks: modeDef.volunteerTasks,
-      sponsorOpportunities: modeDef.sponsorAsks
+      sourcingModeLabel: sourcingDetails.label,
+      deliverablesDescription: sourcingDetails.deliverables,
+      communityTasks: sourcingDetails.volunteerTasks,
+      sponsorOpportunities: sourcingDetails.sponsorAsks
     };
   });
 

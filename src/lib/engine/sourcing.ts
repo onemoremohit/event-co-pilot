@@ -695,3 +695,129 @@ export function computeSourcingModeCost(
 
   return Math.round(rawCost * locMultiplier);
 }
+
+import { EventArchetype } from '../constants/cultural';
+
+export interface SourcingDetails {
+  mode: SourcingMode;
+  label: string;
+  badgeColor: string;
+  deliverables: string;
+  volunteerTasks: string[];
+  sponsorAsks: string[];
+}
+
+/**
+ * Returns archetype-aware sourcing mode details.
+ * Removes prasad references for Dandiya/Garba, Cultural Nights, and Neighborhood Gatherings.
+ */
+export function getCategorySourcingDetails(
+  slug: BudgetCategorySlug,
+  mode: SourcingMode,
+  archetype: EventArchetype = 'pooja_religious'
+): SourcingDetails {
+  const baseMode = CATEGORY_SOURCING_CONFIG[slug].modes[mode];
+
+  if (slug === 'food_prasad' && archetype === 'dandiya_garba') {
+    if (mode === 'community_sourced') {
+      return {
+        ...baseMode,
+        label: 'Community Potluck & Snacks (₹0 Cash)',
+        deliverables: 'Participating families bring regional savory snacks (farsan, dhokla, samosas) and sweets; resident volunteer-managed distribution.',
+        volunteerTasks: [
+          'Create snack counter registration sheet (Wing A brings sweet, Wing B savory farsan)',
+          'Set up 4 food serving tables and arrange eco-friendly paper plates',
+          'Recruit 6 volunteers for dancer snack counter and queue coordination',
+          'Manage continuous water hydration dispensers around dance circle'
+        ],
+        sponsorAsks: [
+          'Ask local sweet mart to donate 5kg sweets in exchange for banner announcement'
+        ]
+      };
+    }
+    if (mode === 'minimal_paid') {
+      return {
+        ...baseMode,
+        label: 'Chaat Stalls & Hot Chai/Snack Pack',
+        deliverables: 'Live pav bhaji / chaat counters, hot tea/coffee, and boxed snacks for dancers.',
+        volunteerTasks: [
+          'Coordinate snack coupon distribution desk',
+          'Ensure hydration points near dancing lawn are continuously replenished'
+        ]
+      };
+    }
+    if (mode === 'standard_paid') {
+      return {
+        ...baseMode,
+        label: 'Standard Festive Dinner Buffet',
+        deliverables: 'Full vegetarian buffet feast: Puri/Roti, Paneer vegetable, Dal/Chhole, Pulao, Gulab Jamun, and soft beverages.',
+        volunteerTasks: [
+          'Buffet counter crowd control and elder seating assistance'
+        ]
+      };
+    }
+    if (mode === 'enhanced_paid') {
+      return {
+        ...baseMode,
+        label: 'Enhanced Multi-Cuisine Feast & Live Stalls',
+        deliverables: 'Buffet feast plus 3 live counters (Chaat, Dosa, Jalebi-Fafda), welcome coolers, and dessert station.',
+        volunteerTasks: ['Guest hospitality and VIP dining coordinator']
+      };
+    }
+    if (mode === 'premium_paid') {
+      return {
+        ...baseMode,
+        label: 'Premium Gourmet Feast & Mocktail Lounge',
+        deliverables: 'Executive festive dining with 4 live stations, artisanal regional spread, mocktails, and uniformed banquet staff.',
+        volunteerTasks: ['Menu curation sign-off and banquet manager liaison']
+      };
+    }
+  }
+
+  if (slug === 'food_prasad' && archetype === 'cultural_night') {
+    if (mode === 'community_sourced') {
+      return {
+        ...baseMode,
+        label: 'Resident Community Potluck (₹0 Cash)',
+        deliverables: 'Resident-contributed dishes for post-event community dinner and artist green room hospitality.',
+        volunteerTasks: [
+          'Coordinate wing-wise dinner contribution sheet',
+          'Stage crew & artist hospitality food liaison'
+        ]
+      };
+    }
+    if (mode === 'minimal_paid') {
+      return {
+        ...baseMode,
+        label: 'High Tea & Intermission Snack Pack',
+        deliverables: 'Fresh tea, coffee, samosas/cookies, and artist refreshment boxes.'
+      };
+    }
+    if (mode === 'standard_paid') {
+      return {
+        ...baseMode,
+        label: 'Standard Post-Event Dinner Buffet',
+        deliverables: 'Full multi-course vegetarian dinner buffet after the performances conclude.'
+      };
+    }
+  }
+
+  if (slug === 'food_prasad' && archetype === 'neighborhood_gathering') {
+    if (mode === 'community_sourced') {
+      return {
+        ...baseMode,
+        label: 'Neighborhood Community Potluck (₹0 Cash)',
+        deliverables: 'Shared neighborhood snacks, home-cooked dishes, and tea station organized by resident volunteers.'
+      };
+    }
+    if (mode === 'minimal_paid') {
+      return {
+        ...baseMode,
+        label: 'Community High Tea & Evening Snacks',
+        deliverables: 'Masala chai, biscuits, samosas, and cold bottled water.'
+      };
+    }
+  }
+
+  return baseMode;
+}
