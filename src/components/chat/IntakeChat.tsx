@@ -41,6 +41,7 @@ export function IntakeChat({
   ]);
   const [candidatePlans, setCandidatePlans] = useState<PlanStyle[]>([]);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const prevSubTypeRef = useRef<string | undefined>(currentProfile.eventSubType);
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -49,6 +50,96 @@ export function IntakeChat({
   useEffect(() => {
     scrollToBottom();
   }, [messages, isTyping, candidatePlans]);
+
+  // Synchronize Assistant question when event archetype is selected or deselected from headline banner
+  useEffect(() => {
+    if (prevSubTypeRef.current !== currentProfile.eventSubType) {
+      const current = currentProfile.eventSubType;
+      prevSubTypeRef.current = current;
+
+      if (!current) {
+        // Deselected from headline banner: return assistant back to the first question
+        const firstMsg: ChatMessage = {
+          id: `bot-first-${Date.now()}`,
+          eventId: currentProfile.id || 'new',
+          role: 'assistant',
+          content: 'Namaste! Welcome to Event Co-pilot. I am your planning companion for society festivals, cultural nights, and community celebrations.\n\nWhich type of celebration are we organizing?',
+          timestamp: new Date().toISOString()
+        };
+
+        setMessages(prev => {
+          if (prev.length <= 1) {
+            return [firstMsg];
+          }
+          if (prev[prev.length - 1].role === 'assistant') {
+            return [...prev.slice(0, -1), firstMsg];
+          }
+          return [...prev, firstMsg];
+        });
+
+        setQuickReplies([
+          'Diwali / Festival Celebration',
+          'Society Cultural Night & Stage Performances',
+          'Neighborhood Community Gathering'
+        ]);
+      } else {
+        // Selected from headline banner: shift to the next question (budget)
+        const subTypeLabels: Record<string, string> = {
+          festival: 'Festival Celebration',
+          cultural_night: 'Cultural Night & Stage Show',
+          neighborhood: 'Neighborhood Community Gathering'
+        };
+        const label = subTypeLabels[current] || current.replace('_', ' ');
+
+        let nextMsg = '';
+        let nextReplies: string[] = [];
+
+        if (!currentProfile.totalBudget?.amount) {
+          nextMsg = `Wonderful! We are planning a ${label}. What is your estimated or available budget for this celebration? (e.g. ₹50,000, ₹1.5L, ₹4 Lakhs)`;
+          nextReplies = ['₹50,000', '₹1,50,000', '₹3,00,000', '₹5,00,000'];
+        } else if (!currentProfile.guestCount) {
+          nextMsg = `Great, a ${label} with ₹${currentProfile.totalBudget.amount.toLocaleString('en-IN')} budget! How many attendees or families are you expecting?`;
+          nextReplies = ['50 guests', '100 guests', '200 guests', '350 guests'];
+        } else if (!currentProfile.eventDate) {
+          nextMsg = `When is the ${label} taking place, or how many weeks do we have to prepare?`;
+          nextReplies = ['In 2 weeks', 'In 4 weeks', 'In 6 weeks', 'In 8 weeks'];
+        } else if (!currentProfile.location?.city) {
+          nextMsg = `Which city or town is hosting this ${label}?`;
+          nextReplies = ['Bengaluru', 'Delhi NCR', 'Meerut', 'Mumbai', 'Village / Rural'];
+        } else {
+          nextMsg = `Selected celebration archetype: ${label}. What details would you like to adjust?`;
+          nextReplies = [];
+        }
+
+        const shiftMsg: ChatMessage = {
+          id: `bot-shift-${Date.now()}`,
+          eventId: currentProfile.id || 'new',
+          role: 'assistant',
+          content: nextMsg,
+          timestamp: new Date().toISOString()
+        };
+
+        setMessages(prev => {
+          if (prev.length <= 1) {
+            return [shiftMsg];
+          }
+          if (prev[prev.length - 1].role === 'assistant') {
+            return [...prev.slice(0, -1), shiftMsg];
+          }
+          return [...prev, shiftMsg];
+        });
+
+        setQuickReplies(nextReplies);
+      }
+    }
+  }, [
+    currentProfile.eventSubType,
+    currentProfile.totalBudget?.amount,
+    currentProfile.guestCount,
+    currentProfile.eventDate,
+    currentProfile.location?.city,
+    currentProfile.id
+  ]);
 
   const handleSendMessage = async (textToSend: string) => {
     if (!textToSend.trim()) return;
